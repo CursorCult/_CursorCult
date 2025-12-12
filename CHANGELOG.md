@@ -10,6 +10,10 @@ This project uses semantic versioning (`vX.Y.Z`).
 - Front matter `description` is checked against the GitHub repo description when available.
 - `cursorcult new` templates include the required front matter.
 
+## v0.5.0
+
+- Added `cursorcult verify` command (alias for `ccverify`).
+
 ## v0.3.0
 
 - Rule packs now use `RULE.md` (not `RULES.md`); `cursorcult new` and `ccverify` enforce this.

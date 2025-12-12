@@ -78,4 +78,4 @@ Release convention for new rules:
 
 - Open a PR against the relevant rule repo.
 - Keep changes focused and consistent with the rule’s voice: `RULE.md` is professional/exacting; `README.md` can be cheeky.
-- Before tagging a rule release, validate the repo format with `ccverify` from a local clone.
+- Before tagging a rule release, validate the repo format with `cursorcult verify` (or `ccverify`) from a local clone.
