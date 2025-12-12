@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cursorcult"
-version = "0.7.0"
+version = "0.8.0"
 description = "CLI to list and link CursorCult Cursor rule packs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -20,7 +20,6 @@ classifiers = [
 
 [project.scripts]
 cursorcult = "cursorcult.cli:main"
-ccverify = "cursorcult.ccverify:main"
 
 [project.urls]
 Homepage = "https://github.com/CursorCult/_CursorCult.git"

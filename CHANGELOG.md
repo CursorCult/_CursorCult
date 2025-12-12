@@ -23,6 +23,10 @@ This project uses semantic versioning (`vX.Y.Z`).
 
 - `cursorcult new` now requires an explicit description and no longer defaults to “Cursor rule pack: …”.
 
+## v0.8.0
+
+- Removed the standalone `ccverify` command; use `cursorcult verify`.
+
 ## v0.3.0
 
 - Rule packs now use `RULE.md` (not `RULES.md`); `cursorcult new` and `ccverify` enforce this.

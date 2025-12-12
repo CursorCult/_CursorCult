@@ -47,12 +47,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install ccverify
+      - name: Install cursorcult
         run: |
           python -m pip install --upgrade pip
           python -m pip install cursorcult || python -m pip install git+https://github.com/CursorCult/_CursorCult.git
-      - name: Run ccverify
-        run: ccverify .
+      - name: Verify rules repo
+        run: cursorcult verify .
 """
 
 MAX_RULES_CHARS = 5000

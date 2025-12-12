@@ -88,10 +88,10 @@ Release convention for new rules:
 
 - Develop on `main` with any number of commits while unreleased (no tags).
 - When ready for the first release, squash `main` to a single commit and tag it `v0`.
-- After any `vN` tags exist, every commit on `main` must have exactly one contiguous `vN` tag (`v0`, `v1`, `v2`, …). This is what `ccverify` enforces.
+- After any `vN` tags exist, tags must remain contiguous (`v0`, `v1`, `v2`, …). This is what `cursorcult verify` enforces.
 
 ## Contributing
 
 - Open a PR against the relevant rule repo.
 - Keep changes focused and consistent with the rule’s voice: `RULE.md` is professional/exacting; `README.md` can be cheeky.
-- Before tagging a rule release, validate the repo format with `cursorcult verify` (or `ccverify`) from a local clone.
+- Before tagging a rule release, validate the repo format with `cursorcult verify` from a local clone.
