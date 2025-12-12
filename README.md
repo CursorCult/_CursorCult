@@ -54,6 +54,7 @@ To link a rule pack into your project as a git submodule:
 ```sh
 cursorcult link <NAME>
 cursorcult link <NAME>:v<X>
+cursorcult link <NAME1> <NAME2> ...
 ```
 
 `link` expects a `.cursor/rules/` directory at your project root. It adds the chosen rule repo as a submodule under `.cursor/rules/<NAME>` and checks out the requested tag (default: latest `vN`).

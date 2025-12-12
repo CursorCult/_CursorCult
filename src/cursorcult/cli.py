@@ -17,7 +17,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     link_parser = subparsers.add_parser(
         "link", help="Link a rule pack (submodule by default)."
     )
-    link_parser.add_argument("spec", help="Rule name or name:tag (e.g., UNO or UNO:v1).")
+    link_parser.add_argument(
+        "specs",
+        nargs="+",
+        help="One or more rule specs: NAME or NAME:tag (e.g., UNO or UNO:v1).",
+    )
     link_parser.add_argument(
         "--subtree",
         action="store_true",
@@ -57,7 +61,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             print_repos(repos)
             return 0
         if args.command == "link":
-            link_rule(args.spec, subtree=args.subtree)
+            for spec in args.specs:
+                link_rule(spec, subtree=args.subtree)
             return 0
         if args.command == "copy":
             copy_rule(args.spec)
