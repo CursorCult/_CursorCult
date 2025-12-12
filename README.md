@@ -4,7 +4,7 @@ CursorCult is a library of small, opinionated Cursor rule packs. Each rule lives
 
 ## How to use
 
-1. Browse the rule packs below and pick the ones that match your project.
+1. Run `cursorcult` to see released rule packs and pick the ones that match your project.
 2. Read the pack’s `README.md` to understand when it applies and how it interacts with other rules.
 3. Use the pack’s `RULES.md` as your Cursor rules:
    - Copy the file into your project’s Cursor rules location, or
@@ -50,6 +50,27 @@ cursorcult link <NAME>:v<X>
 `link` expects a `.cursor/rules/` directory at your project root. It adds the chosen rule repo as a submodule under `.cursor/rules/<NAME>` and checks out the requested tag (default: latest `vN`).
 
 Rule repos use simple integer tags (`v0`, `v1`, `v2`, …). The CLI itself is versioned with semantic versioning (`vX.Y.Z`).
+
+## Creating a new rule pack
+
+To create a new rule repo with the standard template:
+
+```sh
+cursorcult new <NAME> --description "one-line summary"
+```
+
+This creates `CursorCult/<NAME>` and initializes:
+
+- `LICENSE` (Unlicense)
+- `README.md` (with install section)
+- `RULES.md`
+- `.github/workflows/ccverify.yml`
+
+Release convention for new rules:
+
+- Develop on `main` with any number of commits while unreleased (no tags).
+- When ready for the first release, squash `main` to a single commit and tag it `v0`.
+- After any `vN` tags exist, every commit on `main` must have exactly one contiguous `vN` tag (`v0`, `v1`, `v2`, …). This is what `ccverify` enforces.
 
 ## Contributing
 

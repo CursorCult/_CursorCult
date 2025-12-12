@@ -4,6 +4,11 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
+## v0.2.0
+
+- Added `cursorcult new` to create a new rule repo with standard template files.
+- `ccverify` now allows pre‑v0 repos to have no tags; once tags exist, they must follow contiguous `vN` rules.
+
 ## v0.1.1
 
 - `cursorcult list` now shows only repos with a `vN` tag (released rules).
