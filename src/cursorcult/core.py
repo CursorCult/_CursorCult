@@ -37,16 +37,35 @@ class RepoInfo:
 
 
 def http_json(url: str) -> object:
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "cursorcult"}
     token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(url, headers=headers)
-    try:
+
+    def fetch(with_token: bool) -> object:
+        headers = {"Accept": "application/vnd.github+json", "User-Agent": "cursorcult"}
+        if with_token and token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read().decode("utf-8"))
+
+    try:
+        return fetch(with_token=True)
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"GitHub API error {e.code} for {url}") from e
+        # If a user has a mis-scoped/SSO-blocked token in env, GitHub can 403 even for public data.
+        # Retry unauthenticated to allow public access in that case.
+        if e.code == 403 and token:
+            try:
+                return fetch(with_token=False)
+            except Exception:
+                pass
+        body = ""
+        try:
+            body = e.read().decode("utf-8", errors="ignore")
+        except Exception:
+            body = ""
+        hint = ""
+        if "rate limit" in body.lower():
+            hint = " (rate limit exceeded; set GH_TOKEN from `gh auth token` or wait)"
+        raise RuntimeError(f"GitHub API error {e.code} for {url}{hint}: {body or e.reason}") from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"Network error fetching {url}: {e}") from e
 
