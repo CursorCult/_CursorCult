@@ -4,16 +4,20 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
-## v0.11.0
+## v0.11.2
 
-- `cursorcult link` supports `--subtree` to vendor editable rule packs.
-- `cursorcult link` and `cursorcult copy` accept multiple specs in one call.
-- Publish workflow disables attestations to avoid Rekor flakiness.
+- `cursorcult link` and `cursorcult link --subtree` now write relative paths (no absolute `.gitmodules` entries).
 
 ## v0.11.1
 
 - `cursorcult list` retries unauthenticated on GitHub 403 to avoid bad-token failures.
 - README wording clarified for GitHub installs.
+
+## v0.11.0
+
+- `cursorcult link` supports `--subtree` to vendor editable rule packs.
+- `cursorcult link` and `cursorcult copy` accept multiple specs in one call.
+- Publish workflow disables attestations to avoid Rekor flakiness.
 
 ## v0.4.0
 
