@@ -181,6 +181,8 @@ def link_rule(spec: str, subtree: bool = False) -> None:
     repo_url = REPO_URL_TEMPLATE.format(name=name)
     if subtree:
         prefix = os.path.relpath(target_path, os.getcwd())
+        if os.sep != "/":
+            prefix = prefix.replace(os.sep, "/")
         try:
             run(["git", "subtree", "add", "--prefix", prefix, repo_url, tag, "--squash"])
         except RuntimeError as e:
@@ -191,8 +193,11 @@ def link_rule(spec: str, subtree: bool = False) -> None:
         print("Next: commit the new rule directory in your repo.")
         return
 
-    run(["git", "submodule", "add", repo_url, target_path])
-    run(["git", "-C", target_path, "checkout", tag])
+    prefix = os.path.relpath(target_path, os.getcwd())
+    if os.sep != "/":
+        prefix = prefix.replace(os.sep, "/")
+    run(["git", "submodule", "add", repo_url, prefix])
+    run(["git", "-C", prefix, "checkout", tag])
 
     print(f"Linked {name} at {tag} into {target_path}.")
     print("Next: commit .gitmodules and the submodule directory in your repo.")
