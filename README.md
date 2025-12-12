@@ -38,7 +38,7 @@ If the PyPI package isn’t available yet, install from GitHub:
 pipx install git+https://github.com/CursorCult/_CursorCult.git
 ```
 
-This prints the current rules in the organization, each repo’s one‑line description, latest tag version, and a link to its `README.md`.
+This prints the released rules in the organization (repos with a `vN` tag), each repo’s one‑line description, latest tag version, and a link to its `README.md`. Repos without tags are treated as unreleased and are not listed.
 
 To link a rule pack into your project as a git submodule:
 

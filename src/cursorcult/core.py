@@ -49,7 +49,7 @@ def http_json(url: str) -> object:
         raise RuntimeError(f"Network error fetching {url}: {e}") from e
 
 
-def list_repos() -> List[RepoInfo]:
+def list_repos(include_untagged: bool = False) -> List[RepoInfo]:
     repos_raw = http_json(f"{API_BASE}/orgs/{ORG}/repos?per_page=200&type=public")
     repos: List[RepoInfo] = []
     for r in repos_raw:
@@ -61,7 +61,10 @@ def list_repos() -> List[RepoInfo]:
         description = (r.get("description") or "").strip() or "no description"
         tags_raw = http_json(f"{API_BASE}/repos/{ORG}/{name}/tags?per_page=100")
         tags = [t.get("name", "") for t in tags_raw if t.get("name")]
-        repos.append(RepoInfo(name=name, description=description, tags=tags))
+        repo_info = RepoInfo(name=name, description=description, tags=tags)
+        if not include_untagged and repo_info.latest_tag is None:
+            continue
+        repos.append(repo_info)
     repos.sort(key=lambda x: x.name.lower())
     return repos
 
@@ -108,7 +111,7 @@ def link_rule(spec: str) -> None:
     if not name:
         raise ValueError("Rule name is required.")
 
-    repos = {r.name: r for r in list_repos()}
+    repos = {r.name: r for r in list_repos(include_untagged=True)}
     if name not in repos:
         available = ", ".join(sorted(repos.keys()))
         raise RuntimeError(f"Unknown rule '{name}'. Available: {available}")
@@ -131,4 +134,3 @@ def link_rule(spec: str) -> None:
 
     print(f"Linked {name} at {tag} into {target_path}.")
     print("Next: commit .gitmodules and the submodule directory in your repo.")
-
