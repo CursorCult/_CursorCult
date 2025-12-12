@@ -1,11 +1,7 @@
-#!/usr/bin/env python3
-
-import argparse
 import json
 import os
 import re
 import subprocess
-import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -39,10 +35,11 @@ class RepoInfo:
 
 
 def http_json(url: str) -> object:
-    req = urllib.request.Request(
-        url,
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "cursorcult.py"},
-    )
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "cursorcult"}
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read().decode("utf-8"))
@@ -54,7 +51,7 @@ def http_json(url: str) -> object:
 
 def list_repos() -> List[RepoInfo]:
     repos_raw = http_json(f"{API_BASE}/orgs/{ORG}/repos?per_page=200&type=public")
-    repos = []
+    repos: List[RepoInfo] = []
     for r in repos_raw:
         name = r.get("name", "")
         if not name or name.startswith("."):
@@ -97,7 +94,9 @@ def ensure_rules_dir() -> str:
 
 
 def run(cmd: List[str], cwd: Optional[str] = None) -> None:
-    proc = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.run(
+        cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
     if proc.returncode != 0:
         raise RuntimeError(
             f"Command failed: {' '.join(cmd)}\n{proc.stderr.strip() or proc.stdout.strip()}"
@@ -132,36 +131,4 @@ def link_rule(spec: str) -> None:
 
     print(f"Linked {name} at {tag} into {target_path}.")
     print("Next: commit .gitmodules and the submodule directory in your repo.")
-
-
-def main(argv: List[str]) -> int:
-    parser = argparse.ArgumentParser(
-        prog="cursorcult.py",
-        description="List and link CursorCult rule packs.",
-    )
-    subparsers = parser.add_subparsers(dest="command")
-
-    subparsers.add_parser("list", help="List rule packs (default).")
-    link_parser = subparsers.add_parser("link", help="Link a rule pack as a submodule.")
-    link_parser.add_argument("spec", help="Rule name or name:tag (e.g., UNO or UNO:v1).")
-
-    args = parser.parse_args(argv)
-
-    try:
-        if args.command in (None, "list"):
-            repos = list_repos()
-            print_repos(repos)
-            return 0
-        if args.command == "link":
-            link_rule(args.spec)
-            return 0
-        parser.print_help()
-        return 1
-    except Exception as e:
-        print(f"error: {e}", file=sys.stderr)
-        return 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
 

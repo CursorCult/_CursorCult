@@ -25,10 +25,17 @@ Rule repos are intentionally tiny and low‑ceremony. Contributions are via pull
 
 ## Discovering rules
 
-CursorCult publishes many small rule repos. Instead of keeping a static list here, use the helper script in this repo:
+CursorCult publishes many small rule repos. Instead of keeping a static list here, use the `cursorcult` CLI.
 
 ```sh
-python3 cursorcult.py
+pipx install cursorcult
+cursorcult
+```
+
+If the PyPI package isn’t available yet, install from GitHub:
+
+```sh
+pipx install git+https://github.com/CursorCult/_CursorCult.git
 ```
 
 This prints the current rules in the organization, each repo’s one‑line description, latest tag version, and a link to its `README.md`.
@@ -36,11 +43,13 @@ This prints the current rules in the organization, each repo’s one‑line desc
 To link a rule pack into your project as a git submodule:
 
 ```sh
-python3 cursorcult.py link <NAME>
-python3 cursorcult.py link <NAME>:v<X>
+cursorcult link <NAME>
+cursorcult link <NAME>:v<X>
 ```
 
 `link` expects a `.cursor/rules/` directory at your project root. It adds the chosen rule repo as a submodule under `.cursor/rules/<NAME>` and checks out the requested tag (default: latest `vN`).
+
+Rule repos use simple integer tags (`v0`, `v1`, `v2`, …). The CLI itself is versioned with semantic versioning (`vX.Y.Z`).
 
 ## Contributing
 
