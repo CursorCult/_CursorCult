@@ -10,6 +10,11 @@ This project uses semantic versioning (`vX.Y.Z`).
 - `cursorcult link` and `cursorcult copy` accept multiple specs in one call.
 - Publish workflow disables attestations to avoid Rekor flakiness.
 
+## v0.11.1
+
+- `cursorcult list` retries unauthenticated on GitHub 403 to avoid bad-token failures.
+- README wording clarified for GitHub installs.
+
 ## v0.4.0
 
 - `ccverify` now requires a YAML front matter header in `RULE.md` with `description` and `alwaysApply: true`.
