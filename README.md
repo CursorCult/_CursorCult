@@ -41,7 +41,7 @@ pipx install cursorcult
 cursorcult
 ```
 
-If the PyPI package isn’t available yet, install from GitHub:
+To install directly from GitHub:
 
 ```sh
 pipx install git+https://github.com/CursorCult/_CursorCult.git
