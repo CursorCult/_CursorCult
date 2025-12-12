@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple
 
-from .constants import TAG_RE, UNLICENSE_TEXT
+from .constants import MAX_RULES_CHARS, TAG_RE, UNLICENSE_TEXT
 
 
 @dataclass
@@ -104,6 +104,20 @@ def check_readme_install(path: str, repo_name: str) -> List[str]:
     return errors
 
 
+def check_rules_length(path: str) -> List[str]:
+    errors: List[str] = []
+    rules_path = os.path.join(path, "RULES.md")
+    if not os.path.isfile(rules_path):
+        return ["RULES.md file missing."]
+    with open(rules_path, "r", encoding="utf-8") as f:
+        text = f.read()
+    if len(text) > MAX_RULES_CHARS:
+        errors.append(
+            f"RULES.md must be under {MAX_RULES_CHARS} characters (found {len(text)})."
+        )
+    return errors
+
+
 def get_main_commits(path: str) -> List[str]:
     run(["git", "rev-parse", "--verify", "main"], cwd=path)
     out = run(["git", "rev-list", "main"], cwd=path)
@@ -166,6 +180,7 @@ def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
     errors.extend(check_tracked_files(path))
     errors.extend(check_license(path))
     errors.extend(check_readme_install(path, repo_name))
+    errors.extend(check_rules_length(path))
     try:
         main_commits = get_main_commits(path)
         errors.extend(check_tags(path, main_commits))

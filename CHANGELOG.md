@@ -9,6 +9,10 @@ This project uses semantic versioning (`vX.Y.Z`).
 - Added `cursorcult new` to create a new rule repo with standard template files.
 - `ccverify` now allows pre‑v0 repos to have no tags; once tags exist, they must follow contiguous `vN` rules.
 
+## v0.2.1
+
+- `ccverify` now enforces `RULES.md` under 5000 characters.
+
 ## v0.1.1
 
 - `cursorcult list` now shows only repos with a `vN` tag (released rules).

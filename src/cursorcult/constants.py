@@ -55,3 +55,4 @@ jobs:
         run: ccverify .
 """
 
+MAX_RULES_CHARS = 5000
