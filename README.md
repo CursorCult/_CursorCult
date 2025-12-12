@@ -23,18 +23,24 @@ Every rule repo follows the same minimal format:
 
 Rule repos are intentionally tiny and low‑ceremony. Contributions are via pull requests.
 
-## Rule packs
+## Discovering rules
 
-- UNO — one file == one definitional unit: https://github.com/CursorCult/UNO.git
-- EzGrep — search‑first naming for grep/ack workflows: https://github.com/CursorCult/EzGrep.git
-- PUTT PUTT — total coverage via public‑only tests: https://github.com/CursorCult/PUTTPUTT.git
-- UMP — underscore means private everywhere: https://github.com/CursorCult/UMP.git
-- HEDGE_CLIPPERS — no hedged defaults; explicitness over fallbacks: https://github.com/CursorCult/HEDGE_CLIPPERS.git
-- DRY — do not repeat yourself: https://github.com/CursorCult/DRY.git
-- RAII — resource acquisition is initialization: https://github.com/CursorCult/RAII.git
-- Pinocchio — avoid documentation that could become lies: https://github.com/CursorCult/Pinocchio.git
-- TruthOrSilence — internal prose must be true or deleted: https://github.com/CursorCult/TruthOrSilence.git
-- NoDeadCode — no dead, unused, or unreachable code: https://github.com/CursorCult/NoDeadCode.git
+CursorCult publishes many small rule repos. Instead of keeping a static list here, use the helper script in this repo:
+
+```sh
+python3 cursorcult.py
+```
+
+This prints the current rules in the organization, each repo’s one‑line description, latest tag version, and a link to its `README.md`.
+
+To link a rule pack into your project as a git submodule:
+
+```sh
+python3 cursorcult.py link <NAME>
+python3 cursorcult.py link <NAME>:v<X>
+```
+
+`link` expects a `.cursor/rules/` directory at your project root. It adds the chosen rule repo as a submodule under `.cursor/rules/<NAME>` and checks out the requested tag (default: latest `vN`).
 
 ## Contributing
 
