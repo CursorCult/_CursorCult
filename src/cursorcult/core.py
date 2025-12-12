@@ -209,7 +209,9 @@ def new_rule_repo(name: str, description: Optional[str] = None) -> None:
     if os.path.exists(name):
         raise RuntimeError(f"Path already exists: {name}")
 
-    repo_description = description or f"Cursor rule pack: {name}"
+    if not description:
+        raise ValueError("Description is required for new rule repos.")
+    repo_description = description
     create_payload = {
         "name": name,
         "description": repo_description,

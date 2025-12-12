@@ -19,6 +19,10 @@ This project uses semantic versioning (`vX.Y.Z`).
 - Added `cursorcult copy` to copy a rule pack into `.cursor/rules/<NAME>` without submodules.
 - Documentation updated to reflect multi-pack layout under `.cursor/rules/`.
 
+## v0.7.0
+
+- `cursorcult new` now requires an explicit description and no longer defaults to “Cursor rule pack: …”.
+
 ## v0.3.0
 
 - Rule packs now use `RULE.md` (not `RULES.md`); `cursorcult new` and `ccverify` enforce this.

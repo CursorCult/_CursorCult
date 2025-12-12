@@ -24,7 +24,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     new_parser.add_argument("name", help="New rule repo name (e.g., MyRule).")
     new_parser.add_argument(
         "--description",
-        help="One-line GitHub repo description.",
+        required=True,
+        help="One-line GitHub repo description (must match RULE.md description).",
     )
     verify_parser = subparsers.add_parser(
         "verify", help="Verify a CursorCult rules repo follows required format."
