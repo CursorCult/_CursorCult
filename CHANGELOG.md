@@ -4,6 +4,12 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
+## v0.3.0
+
+- Rule packs now use `RULE.md` (not `RULES.md`); `cursorcult new` and `ccverify` enforce this.
+- `ccverify` no longer requires every `main` commit to be tagged; it only enforces contiguous `vN` tags on `main`.
+- New rule templates include the official Cursor rule file format link.
+
 ## v0.2.0
 
 - Added `cursorcult new` to create a new rule repo with standard template files.
@@ -11,7 +17,7 @@ This project uses semantic versioning (`vX.Y.Z`).
 
 ## v0.2.1
 
-- `ccverify` now enforces `RULES.md` under 5000 characters.
+- `ccverify` now enforces `RULE.md` under 5000 characters.
 
 ## v0.1.1
 

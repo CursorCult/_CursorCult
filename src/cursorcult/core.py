@@ -202,6 +202,8 @@ pipx install cursorcult
 cursorcult link {name}
 ```
 
+Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-format
+
 **When to use**
 
 - TODO
@@ -221,7 +223,7 @@ cursorcult link {name}
 
 TODO: Describe the rule precisely.
 """
-    with open(os.path.join(name, "RULES.md"), "w", encoding="utf-8") as f:
+    with open(os.path.join(name, "RULE.md"), "w", encoding="utf-8") as f:
         f.write(rules_md)
 
     run(["git", "-C", name, "checkout", "-B", "main"])
@@ -233,7 +235,7 @@ TODO: Describe the rule precisely.
             "add",
             "LICENSE",
             "README.md",
-            "RULES.md",
+            "RULE.md",
             ".github/workflows/ccverify.yml",
         ]
     )

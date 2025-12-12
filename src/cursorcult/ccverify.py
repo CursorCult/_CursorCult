@@ -55,7 +55,7 @@ def check_tracked_files(path: str) -> List[str]:
     except Exception:
         files = [f for f in os.listdir(path) if not f.startswith(".")]
 
-    core = {"LICENSE", "README.md", "RULES.md"}
+    core = {"LICENSE", "README.md", "RULE.md"}
     ci_paths = {".github/workflows/ccverify.yml", ".github/workflows/ccverify.yaml"}
     tracked = set(files)
 
@@ -106,14 +106,14 @@ def check_readme_install(path: str, repo_name: str) -> List[str]:
 
 def check_rules_length(path: str) -> List[str]:
     errors: List[str] = []
-    rules_path = os.path.join(path, "RULES.md")
+    rules_path = os.path.join(path, "RULE.md")
     if not os.path.isfile(rules_path):
-        return ["RULES.md file missing."]
+        return ["RULE.md file missing."]
     with open(rules_path, "r", encoding="utf-8") as f:
         text = f.read()
     if len(text) > MAX_RULES_CHARS:
         errors.append(
-            f"RULES.md must be under {MAX_RULES_CHARS} characters (found {len(text)})."
+            f"RULE.md must be under {MAX_RULES_CHARS} characters (found {len(text)})."
         )
     return errors
 
@@ -155,13 +155,6 @@ def check_tags(path: str, main_commits: List[str]) -> List[str]:
     off_main = tag_commits - main_set
     if off_main:
         errors.append("All vN tags must point to commits on main.")
-
-    # Ensure every main commit is tagged.
-    untagged = main_set - tag_commits
-    if untagged:
-        errors.append(
-            f"Main has {len(untagged)} untagged commits. Every main commit must have a vN tag."
-        )
 
     # Ensure tags are contiguous starting from v0 with no gaps.
     versions = sorted(int(TAG_RE.match(n).group(1)) for n in tag_names if TAG_RE.match(n))
