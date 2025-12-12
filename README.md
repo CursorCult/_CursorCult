@@ -73,6 +73,7 @@ To copy a rule pack into your project without using submodules:
 ```sh
 cursorcult copy <NAME>
 cursorcult copy <NAME>:v<X>
+cursorcult copy <NAME1> <NAME2> ...
 ```
 
 `copy` writes the pack’s `LICENSE`, `README.md`, and `RULE.md` into `.cursor/rules/<NAME>` at the requested tag.
