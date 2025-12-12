@@ -6,10 +6,17 @@ CursorCult is a library of small, opinionated Cursor rule packs. Each rule lives
 
 1. Run `cursorcult` to see released rule packs and pick the ones that match your project.
 2. Read the pack’s `README.md` to understand when it applies and how it interacts with other rules.
-3. Use the pack’s `RULE.md` as your Cursor rules:
-   - Copy the file into your project’s Cursor rules location, or
-   - Paste its contents into your Cursor rules configuration.
-4. If you want multiple packs, merge their `RULE.md` contents into a single ruleset for your project and resolve any conflicts explicitly.
+3. Add rule packs into your project under `.cursor/rules/`:
+   - Preferred: link them as git submodules (keeps you on tagged versions).
+   - Optional: copy them in as plain files.
+4. Multiple packs coexist as siblings:
+
+```text
+.cursor/rules/UNO/
+.cursor/rules/Pinocchio/
+.cursor/rules/TruthOrSilence/
+...
+```
 
 CursorCult doesn’t prescribe *which* rules you must use—only provides clean, composable building blocks.
 
@@ -50,6 +57,15 @@ cursorcult link <NAME>:v<X>
 ```
 
 `link` expects a `.cursor/rules/` directory at your project root. It adds the chosen rule repo as a submodule under `.cursor/rules/<NAME>` and checks out the requested tag (default: latest `vN`).
+
+To copy a rule pack into your project without using submodules:
+
+```sh
+cursorcult copy <NAME>
+cursorcult copy <NAME>:v<X>
+```
+
+`copy` writes the pack’s `LICENSE`, `README.md`, and `RULE.md` into `.cursor/rules/<NAME>` at the requested tag.
 
 Rule repos use simple integer tags (`v0`, `v1`, `v2`, …). The CLI itself is versioned with semantic versioning (`vX.Y.Z`).
 

@@ -2,6 +2,8 @@ import json
 import os
 import re
 import subprocess
+import tempfile
+import shutil
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -158,6 +160,45 @@ def link_rule(spec: str) -> None:
 
     print(f"Linked {name} at {tag} into {target_path}.")
     print("Next: commit .gitmodules and the submodule directory in your repo.")
+
+
+def copy_rule(spec: str) -> None:
+    name, requested_tag = parse_name_and_tag(spec)
+    if not name:
+        raise ValueError("Rule name is required.")
+
+    repos = {r.name: r for r in list_repos(include_untagged=True)}
+    if name not in repos:
+        available = ", ".join(sorted(repos.keys()))
+        raise RuntimeError(f"Unknown rule '{name}'. Available: {available}")
+
+    repo = repos[name]
+    tag = requested_tag or repo.latest_tag
+    if tag is None:
+        raise RuntimeError(f"Rule '{name}' has no vN tags to copy.")
+
+    rules_dir = ensure_rules_dir()
+    target_path = os.path.join(rules_dir, name)
+    if os.path.exists(target_path):
+        raise RuntimeError(
+            f"Target path already exists: {target_path}. Remove it or choose another name."
+        )
+
+    repo_url = REPO_URL_TEMPLATE.format(name=name)
+
+    with tempfile.TemporaryDirectory(prefix="cursorcult-copy-") as tmp:
+        clone_dir = os.path.join(tmp, name)
+        run(["git", "clone", "--depth", "1", "--branch", tag, repo_url, clone_dir])
+
+        os.makedirs(target_path, exist_ok=False)
+        for filename in ("LICENSE", "README.md", "RULE.md"):
+            src = os.path.join(clone_dir, filename)
+            if not os.path.isfile(src):
+                raise RuntimeError(f"Source repo missing {filename} at tag {tag}.")
+            shutil.copy2(src, os.path.join(target_path, filename))
+
+    print(f"Copied {name} at {tag} into {target_path}.")
+    print("Next: commit the copied rule directory in your repo.")
 
 
 def new_rule_repo(name: str, description: Optional[str] = None) -> None:

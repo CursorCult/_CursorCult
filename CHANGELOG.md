@@ -14,6 +14,11 @@ This project uses semantic versioning (`vX.Y.Z`).
 
 - Added `cursorcult verify` command (alias for `ccverify`).
 
+## v0.6.0
+
+- Added `cursorcult copy` to copy a rule pack into `.cursor/rules/<NAME>` without submodules.
+- Documentation updated to reflect multi-pack layout under `.cursor/rules/`.
+
 ## v0.3.0
 
 - Rule packs now use `RULE.md` (not `RULES.md`); `cursorcult new` and `ccverify` enforce this.
