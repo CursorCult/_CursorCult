@@ -20,6 +20,7 @@ classifiers = [
 
 [project.scripts]
 cursorcult = "cursorcult.cli:main"
+ccverify = "cursorcult.ccverify:main"
 
 [project.urls]
 Homepage = "https://github.com/CursorCult/_CursorCult.git"
@@ -31,4 +32,3 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

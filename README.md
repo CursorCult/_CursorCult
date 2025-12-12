@@ -55,3 +55,4 @@ Rule repos use simple integer tags (`v0`, `v1`, `v2`, …). The CLI itself is ve
 
 - Open a PR against the relevant rule repo.
 - Keep changes focused and consistent with the rule’s voice: `RULES.md` is professional/exacting; `README.md` can be cheeky.
+- Before tagging a rule release, validate the repo format with `ccverify` from a local clone.
