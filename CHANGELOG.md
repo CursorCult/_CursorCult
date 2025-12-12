@@ -27,6 +27,11 @@ This project uses semantic versioning (`vX.Y.Z`).
 
 - Removed the standalone `ccverify` command; use `cursorcult verify`.
 
+## v0.9.0
+
+- `cursorcult list` output formatting simplified to name/version/description with a README URL line.
+- `cursorcult verify` enforces rule repo names <= 20 characters.
+
 ## v0.3.0
 
 - Rule packs now use `RULE.md` (not `RULES.md`); `cursorcult new` and `ccverify` enforce this.

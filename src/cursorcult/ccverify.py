@@ -99,6 +99,12 @@ def check_tracked_files(path: str) -> List[str]:
     return errors
 
 
+def check_repo_name_length(repo_name: str) -> List[str]:
+    if len(repo_name) > 20:
+        return [f"Repo name must be 20 characters or less (found {len(repo_name)})."]
+    return []
+
+
 def check_license(path: str) -> List[str]:
     errors: List[str] = []
     license_path = os.path.join(path, "LICENSE")
@@ -263,6 +269,7 @@ def check_tags(path: str, main_commits: List[str]) -> List[str]:
 def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
     errors: List[str] = []
     repo_name = get_repo_name(path, name_override)
+    errors.extend(check_repo_name_length(repo_name))
     errors.extend(check_tracked_files(path))
     errors.extend(check_license(path))
     errors.extend(check_readme_install(path, repo_name))

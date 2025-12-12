@@ -97,9 +97,14 @@ def list_repos(include_untagged: bool = False) -> List[RepoInfo]:
 
 def print_repos(repos: List[RepoInfo]) -> None:
     for repo in repos:
-        latest = repo.latest_tag or "no tags"
+        latest = repo.latest_tag or "v?"
+        version_field = latest.rjust(3) if len(latest) < 3 else latest
         readme_url = README_URL_TEMPLATE.format(name=repo.name)
-        print(f"{repo.name} — {repo.description} — latest {latest} — {readme_url}")
+        line1 = f"{repo.name:<20} {version_field} {repo.description}"
+        indent = " " * 25  # 20 (name) + 1 + 3 (version) + 1
+        line2 = f"{indent}{readme_url}"
+        print(line1)
+        print(line2)
 
 
 def parse_name_and_tag(spec: str) -> Tuple[str, Optional[str]]:
