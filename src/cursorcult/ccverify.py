@@ -82,15 +82,23 @@ def check_tracked_files(path: str) -> List[str]:
     except Exception:
         files = [f for f in os.listdir(path) if not f.startswith(".")]
 
-    expected = {"LICENSE", "README.md", "RULES.md"}
+    core = {"LICENSE", "README.md", "RULES.md"}
+    ci_paths = {".github/workflows/ccverify.yml", ".github/workflows/ccverify.yaml"}
     tracked = set(files)
-    if tracked != expected:
-        missing = expected - tracked
-        extra = tracked - expected
-        if missing:
-            errors.append(f"Missing required files: {', '.join(sorted(missing))}.")
-        if extra:
-            errors.append(f"Extra tracked files not allowed: {', '.join(sorted(extra))}.")
+
+    missing = core - tracked
+    if missing:
+        errors.append(f"Missing required files: {', '.join(sorted(missing))}.")
+
+    has_ci = bool(tracked & ci_paths)
+    if not has_ci:
+        errors.append(
+            "Missing required CI workflow: .github/workflows/ccverify.yml (or .yaml)."
+        )
+
+    extra = tracked - core - ci_paths
+    if extra:
+        errors.append(f"Extra tracked files not allowed: {', '.join(sorted(extra))}.")
     return errors
 
 
