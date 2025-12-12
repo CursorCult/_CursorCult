@@ -4,6 +4,12 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
+## v0.4.0
+
+- `ccverify` now requires a YAML front matter header in `RULE.md` with `description` and `alwaysApply: true`.
+- Front matter `description` is checked against the GitHub repo description when available.
+- `cursorcult new` templates include the required front matter.
+
 ## v0.3.0
 
 - Rule packs now use `RULE.md` (not `RULES.md`); `cursorcult new` and `ccverify` enforce this.

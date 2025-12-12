@@ -219,7 +219,12 @@ Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-fo
     with open(os.path.join(name, "README.md"), "w", encoding="utf-8") as f:
         f.write(readme)
 
-    rules_md = f"""# {name} Rule
+    rules_md = f"""---
+description: "{repo_description}"
+alwaysApply: true
+---
+
+# {name} Rule
 
 TODO: Describe the rule precisely.
 """

@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple
 
@@ -24,6 +27,27 @@ def run(cmd: List[str], cwd: str) -> str:
             f"Command failed: {' '.join(cmd)}\n{proc.stderr.strip() or proc.stdout.strip()}"
         )
     return proc.stdout
+
+
+def http_json(url: str) -> object:
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "ccverify"}
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"GitHub API error {e.code} for {url}") from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Network error fetching {url}: {e}") from e
+
+
+def fetch_github_description(repo_name: str) -> str:
+    data = http_json(f"https://api.github.com/repos/CursorCult/{repo_name}")
+    desc = (data.get("description") or "").strip()
+    return desc
 
 
 def normalize_text(text: str) -> str:
@@ -118,6 +142,75 @@ def check_rules_length(path: str) -> List[str]:
     return errors
 
 
+def parse_front_matter(text: str) -> Tuple[Optional[str], Optional[str], List[str]]:
+    errors: List[str] = []
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        errors.append("RULE.md must start with a YAML front matter block ('---' on first line).")
+        return None, None, errors
+    end_index = None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            end_index = i
+            break
+    if end_index is None:
+        errors.append("YAML front matter block is not closed with a second '---'.")
+        return None, None, errors
+
+    description = None
+    always_apply = None
+    for line in lines[1:end_index]:
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if key == "description":
+            if (value.startswith('"') and value.endswith('"')) or (
+                value.startswith("'") and value.endswith("'")
+            ):
+                value = value[1:-1]
+            description = value.strip()
+        elif key == "alwaysApply":
+            always_apply = value.strip()
+
+    if not description:
+        errors.append("Front matter must include non-empty description.")
+    if always_apply is None:
+        errors.append("Front matter must include alwaysApply: true.")
+    elif always_apply.lower() != "true":
+        errors.append("alwaysApply must be true.")
+
+    return description, always_apply, errors
+
+
+def check_rule_front_matter(path: str, repo_name: str) -> List[str]:
+    errors: List[str] = []
+    rules_path = os.path.join(path, "RULE.md")
+    if not os.path.isfile(rules_path):
+        return ["RULE.md file missing."]
+    with open(rules_path, "r", encoding="utf-8") as f:
+        text = f.read()
+    description, _always_apply, fm_errors = parse_front_matter(text)
+    errors.extend(fm_errors)
+    if description is None:
+        return errors
+
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    try:
+        gh_desc = fetch_github_description(repo_name)
+    except Exception as e:
+        if token:
+            errors.append(f"Failed to fetch GitHub repo description: {e}")
+        return errors
+    if description != gh_desc:
+        errors.append(
+            f"Front matter description must match GitHub repo description. "
+            f"Front matter: '{description}' vs GitHub: '{gh_desc}'."
+        )
+    return errors
+
+
 def get_main_commits(path: str) -> List[str]:
     run(["git", "rev-parse", "--verify", "main"], cwd=path)
     out = run(["git", "rev-list", "main"], cwd=path)
@@ -174,6 +267,7 @@ def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
     errors.extend(check_license(path))
     errors.extend(check_readme_install(path, repo_name))
     errors.extend(check_rules_length(path))
+    errors.extend(check_rule_front_matter(path, repo_name))
     try:
         main_commits = get_main_commits(path)
         errors.extend(check_tags(path, main_commits))
