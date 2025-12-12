@@ -58,6 +58,15 @@ cursorcult link <NAME>:v<X>
 
 `link` expects a `.cursor/rules/` directory at your project root. It adds the chosen rule repo as a submodule under `.cursor/rules/<NAME>` and checks out the requested tag (default: latest `vN`).
 
+If you want to edit the rule pack locally (for example, add `globs` or change apply mode), vendor it with git subtree instead:
+
+```sh
+cursorcult link --subtree <NAME>
+cursorcult link --subtree <NAME>:v<X>
+```
+
+This copies the rule repo’s contents into `.cursor/rules/<NAME>` as normal files. You can update later with `git subtree pull` if desired.
+
 To copy a rule pack into your project without using submodules:
 
 ```sh

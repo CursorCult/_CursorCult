@@ -14,8 +14,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("list", help="List rule packs (default).")
-    link_parser = subparsers.add_parser("link", help="Link a rule pack as a submodule.")
+    link_parser = subparsers.add_parser(
+        "link", help="Link a rule pack (submodule by default)."
+    )
     link_parser.add_argument("spec", help="Rule name or name:tag (e.g., UNO or UNO:v1).")
+    link_parser.add_argument(
+        "--subtree",
+        action="store_true",
+        help="Vendor the rule using git subtree instead of a submodule (editable).",
+    )
     copy_parser = subparsers.add_parser(
         "copy", help="Copy a rule pack into .cursor/rules without submodules."
     )
@@ -50,7 +57,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print_repos(repos)
             return 0
         if args.command == "link":
-            link_rule(args.spec)
+            link_rule(args.spec, subtree=args.subtree)
             return 0
         if args.command == "copy":
             copy_rule(args.spec)

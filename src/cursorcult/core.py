@@ -137,7 +137,7 @@ def run(cmd: List[str], cwd: Optional[str] = None) -> None:
         )
 
 
-def link_rule(spec: str) -> None:
+def link_rule(spec: str, subtree: bool = False) -> None:
     name, requested_tag = parse_name_and_tag(spec)
     if not name:
         raise ValueError("Rule name is required.")
@@ -160,6 +160,18 @@ def link_rule(spec: str) -> None:
         )
 
     repo_url = REPO_URL_TEMPLATE.format(name=name)
+    if subtree:
+        prefix = os.path.relpath(target_path, os.getcwd())
+        try:
+            run(["git", "subtree", "add", "--prefix", prefix, repo_url, tag, "--squash"])
+        except RuntimeError as e:
+            raise RuntimeError(
+                f"git subtree add failed. Ensure git-subtree is installed. Original error:\n{e}"
+            ) from e
+        print(f"Vendored {name} at {tag} into {target_path} using git subtree.")
+        print("Next: commit the new rule directory in your repo.")
+        return
+
     run(["git", "submodule", "add", repo_url, target_path])
     run(["git", "-C", target_path, "checkout", tag])
 
