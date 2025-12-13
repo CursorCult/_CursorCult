@@ -9,6 +9,8 @@ cursorcult
 
 CursorCult is a library of small, opinionated Cursor rule packs. Each rule lives in its own repository and is meant to be copied into a codebase that wants to follow it.
 
+Main organization page (browse all packs): https://github.com/CursorCult
+
 ## How to use
 
 1. After installing `cursorcult` (above), run it to see released rule packs and pick the ones that match your project.
