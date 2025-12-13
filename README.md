@@ -53,6 +53,22 @@ pipx install git+https://github.com/CursorCult/_CursorCult.git
 
 This prints the released rules in the organization (repos with a `vN` tag), each repo’s one‑line description, latest tag version, and a link to its `README.md`. Repos without tags are treated as unreleased and are not listed.
 
+## Linking a ruleset
+
+Rulesets are named lists of rules registered in `CursorCult/_rulesets`.
+
+To link a ruleset by name (rulesets require included rules to have a `v1` tag):
+
+```sh
+cursorcult link --ruleset <RULESET>
+```
+
+To link from a local file containing newline- or space-separated rule names:
+
+```sh
+cursorcult link --ruleset-file path/to/rules.txt
+```
+
 To link a rule pack into your project as a git submodule:
 
 ```sh
@@ -86,7 +102,11 @@ Rule repos use simple integer tags (`v0`, `v1`, `v2`, …). The CLI itself is ve
 
 ## Creating a new rule pack
 
-To create a new rule repo with the standard template:
+To propose a new rule pack in the CursorCult org, use the intake repo:
+
+- https://github.com/CursorCult/_intake
+
+Maintainers can initialize a new rule repo with the standard template:
 
 ```sh
 cursorcult new <NAME> --description "one-line summary"

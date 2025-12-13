@@ -3,7 +3,15 @@ import sys
 from typing import List, Optional
 
 from .ccverify import verify_repo
-from .core import copy_rule, link_rule, list_repos, new_rule_repo, print_repos
+from .core import (
+    copy_rule,
+    link_rule,
+    link_ruleset,
+    link_ruleset_file,
+    list_repos,
+    new_rule_repo,
+    print_repos,
+)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -19,8 +27,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     link_parser.add_argument(
         "specs",
-        nargs="+",
+        nargs="*",
         help="One or more rule specs: NAME or NAME:tag (e.g., UNO or UNO:v1).",
+    )
+    link_parser.add_argument(
+        "--ruleset",
+        help="Link a named ruleset from CursorCult/_rulesets (requires rules have v1 tag).",
+    )
+    link_parser.add_argument(
+        "--ruleset-file",
+        help="Link rules listed in a local file (newline or space-separated; requires rules have v1 tag).",
     )
     link_parser.add_argument(
         "--subtree",
@@ -65,6 +81,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             print_repos(repos)
             return 0
         if args.command == "link":
+            if args.ruleset and args.ruleset_file:
+                raise ValueError("Use only one of --ruleset or --ruleset-file.")
+            if args.ruleset:
+                link_ruleset(args.ruleset, subtree=args.subtree)
+                return 0
+            if args.ruleset_file:
+                link_ruleset_file(args.ruleset_file, subtree=args.subtree)
+                return 0
+            if not args.specs:
+                raise ValueError("Provide rule specs, or use --ruleset / --ruleset-file.")
             for spec in args.specs:
                 link_rule(spec, subtree=args.subtree)
             return 0
