@@ -11,7 +11,7 @@ CursorCult is a library of small, opinionated Cursor rule packs. Each rule lives
 
 ## How to use
 
-1. Run `cursorcult` to see released rule packs and pick the ones that match your project.
+1. After installing `cursorcult` (above), run it to see released rule packs and pick the ones that match your project.
 2. Read the pack’s `README.md` to understand when it applies and how it interacts with other rules.
 3. Add rule packs into your project under `.cursor/rules/`:
    - Preferred: link them as git submodules (keeps you on tagged versions).
