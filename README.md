@@ -1,5 +1,12 @@
 # CursorCult
 
+## Install (pipx)
+
+```sh
+pipx install cursorcult
+cursorcult
+```
+
 CursorCult is a library of small, opinionated Cursor rule packs. Each rule lives in its own repository and is meant to be copied into a codebase that wants to follow it.
 
 ## How to use
@@ -34,12 +41,7 @@ Cursor rule file format reference: https://cursor.com/docs/context/rules#rulemd-
 
 ## Discovering rules
 
-CursorCult publishes many small rule repos. Instead of keeping a static list here, use the `cursorcult` CLI.
-
-```sh
-pipx install cursorcult
-cursorcult
-```
+CursorCult publishes many small rule repos. Instead of keeping a static list here, use the `cursorcult` CLI (installed above).
 
 To install directly from GitHub:
 
