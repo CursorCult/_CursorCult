@@ -258,8 +258,8 @@ def link_ruleset(ruleset_name: str, *, subtree: bool = False) -> None:
         if not repo:
             print(f"Skipping {name}: not found in org.")
             continue
-        if "v1" not in repo.tags:
-            print(f"Skipping {name}: rulesets require v1 tag.")
+        if "v0" not in repo.tags:
+            print(f"Skipping {name}: rulesets require v0 tag.")
             continue
         link_rule(name, subtree=subtree, skip_existing=True)
 
@@ -280,8 +280,8 @@ def link_ruleset_file(path: str, *, subtree: bool = False) -> None:
         if not repo:
             print(f"Skipping {name}: not found in org.")
             continue
-        if "v1" not in repo.tags:
-            print(f"Skipping {name}: rulesets require v1 tag.")
+        if "v0" not in repo.tags:
+            print(f"Skipping {name}: rulesets require v0 tag.")
             continue
         link_rule(name, subtree=subtree, skip_existing=True)
 

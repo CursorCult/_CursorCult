@@ -57,7 +57,7 @@ This prints the released rules in the organization (repos with a `vN` tag), each
 
 Rulesets are named lists of rules registered in `CursorCult/_rulesets`.
 
-To link a ruleset by name (rulesets require included rules to have a `v1` tag):
+Rulesets only include rules with a `v0` tag; anything missing that requirement gets pruned.
 
 ```sh
 cursorcult link --ruleset <RULESET>

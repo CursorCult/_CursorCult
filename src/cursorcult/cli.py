@@ -32,11 +32,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     link_parser.add_argument(
         "--ruleset",
-        help="Link a named ruleset from CursorCult/_rulesets (requires rules have v1 tag).",
+        help="Link a named ruleset from CursorCult/_rulesets (requires rules have v0 tag).",
     )
     link_parser.add_argument(
         "--ruleset-file",
-        help="Link rules listed in a local file (newline or space-separated; requires rules have v1 tag).",
+        help="Link rules listed in a local file (newline or space-separated; requires rules have v0 tag).",
     )
     link_parser.add_argument(
         "--subtree",
