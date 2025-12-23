@@ -94,6 +94,8 @@ def check_tracked_files(path: str) -> List[str]:
         )
 
     extra = tracked - core - ci_paths
+    # Allow scripts/ directory
+    extra = {f for f in extra if not f.startswith("scripts/")}
     if extra:
         errors.append(f"Extra tracked files not allowed: {', '.join(sorted(extra))}.")
     return errors
