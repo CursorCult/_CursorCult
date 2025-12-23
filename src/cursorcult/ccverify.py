@@ -220,8 +220,14 @@ def check_rule_front_matter(path: str, repo_name: str) -> List[str]:
 
 
 def get_main_commits(path: str) -> List[str]:
-    run(["git", "rev-parse", "--verify", "main"], cwd=path)
-    out = run(["git", "rev-list", "main"], cwd=path)
+    ref = "main"
+    try:
+        run(["git", "rev-parse", "--verify", "main"], cwd=path)
+    except RuntimeError:
+        run(["git", "rev-parse", "--verify", "origin/main"], cwd=path)
+        ref = "origin/main"
+
+    out = run(["git", "rev-list", ref], cwd=path)
     commits = [c for c in out.splitlines() if c]
     return commits
 
