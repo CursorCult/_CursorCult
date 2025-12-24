@@ -29,6 +29,22 @@ Main organization page (browse all packs): https://github.com/CursorCult
 
 CursorCult doesn’t prescribe *which* rules you must use—only provides clean, composable building blocks.
 
+## 🏷️ Versioning Policy
+
+CursorCult follows a strict stability contract based on semantic version tags.
+
+- **`v0` (Volatile):**
+    - The "dev/testing" channel.
+    - Tags are **mutable** and may be force-pushed.
+    - Opting into `v0` means opting into bleeding-edge changes and potential breakage.
+    - Tools will aggressively update `v0` pointers to the latest commit.
+
+- **`v1+` (Stable):**
+    - The "stable" channel.
+    - Tags are **immutable**. Once released, `v1` code never changes.
+    - Users on `v1` stay on `v1` until they explicitly upgrade to `v2`.
+    - If you are on `v0` and `v1` is released, updates will promote you to `v1`.
+
 ## Format
 
 Every rule repo follows the same minimal format:
