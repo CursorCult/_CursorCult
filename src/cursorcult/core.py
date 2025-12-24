@@ -54,8 +54,6 @@ def http_json(url: str) -> object:
     try:
         return fetch(with_token=True)
     except urllib.error.HTTPError as e:
-        # If a user has a mis-scoped/SSO-blocked token in env, GitHub can 403 even for public data.
-        # Retry unauthenticated to allow public access in that case.
         if e.code == 403 and token:
             try:
                 return fetch(with_token=False)
@@ -122,7 +120,7 @@ def print_repos(repos: List[RepoInfo]) -> None:
         version_field = latest.rjust(3) if len(latest) < 3 else latest
         readme_url = README_URL_TEMPLATE.format(name=repo.name)
         line1 = f"{repo.name:<20} {version_field} {repo.description}"
-        indent = " " * 25  # 20 (name) + 1 + 3 (version) + 1
+        indent = " " * 25
         line2 = f"{indent}{readme_url}"
         print(line1)
         print(line2)
@@ -147,40 +145,62 @@ def ensure_rules_dir() -> str:
         )
     return rules_dir
 
+
 def run(cmd: List[str], cwd: Optional[str] = None) -> None:
     proc = subprocess.run(
         cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"Command failed: {' '.join(cmd)}
-{proc.stderr.strip() or proc.stdout.strip()}"
+            f"Command failed: {' '.join(cmd)}\n{proc.stderr.strip() or proc.stdout.strip()}"
         )
+
+def get_latest_remote_tag(name: str) -> Optional[str]:
+    """Fetch latest vN tag for a repo from GitHub API."""
+    try:
+        tags_raw = http_json(f"{API_BASE}/repos/{ORG}/{name}/tags?per_page=100")
+        tags = [t.get("name", "") for t in tags_raw if t.get("name")]
+        versions = []
+        for t in tags:
+            m = TAG_RE.match(t)
+            if m:
+                versions.append((int(m.group(1)), t))
+        if not versions:
+            return None
+        return max(versions, key=lambda x: x[0])[1]
+    except Exception:
+        return None
 
 def link_rule(spec: str, subtree: bool = False, *, skip_existing: bool = False) -> None:
     name, requested_tag = parse_name_and_tag(spec)
     if not name:
         raise ValueError("Rule name is required.")
 
-    repos = {r.name: r for r in list_repos(include_untagged=True)}
-    if name not in repos:
-        available = ", ".join(sorted(repos.keys()))
-        raise RuntimeError(f"Unknown rule '{name}'. Available: {available}")
-
-    repo = repos[name]
-    tag = requested_tag or repo.latest_tag
-    if tag is None:
-        raise RuntimeError(f"Rule '{name}' has no vN tags to link.")
+    tag = requested_tag
+    if not tag:
+        tag = get_latest_remote_tag(name)
+        if not tag:
+             raise RuntimeError(f"Rule '{name}' has no vN tags to link.")
 
     rules_dir = ensure_rules_dir()
     target_path = os.path.join(rules_dir, name)
+    
     if os.path.exists(target_path):
         if skip_existing:
-            print(f"Skipping {name}: already exists at {target_path}.")
+            print(f"Skipping {name}: already exists.")
             return
-        raise RuntimeError(
-            f"Target path already exists: {target_path}. Remove it or choose another name."
-        )
+        
+        if os.path.exists(os.path.join(target_path, ".git")):
+            print(f"Updating {name} to {tag}...")
+            try:
+                run(["git", "fetch", "--tags"], cwd=target_path)
+                run(["git", "checkout", tag], cwd=target_path)
+            except RuntimeError as e:
+                print(f"Failed to update {name}: {e}")
+            return
+        else:
+            print(f"Skipping update for {name} (not a submodule).")
+            return
 
     repo_url = REPO_URL_TEMPLATE.format(name=name)
     if subtree:
@@ -194,7 +214,6 @@ def link_rule(spec: str, subtree: bool = False, *, skip_existing: bool = False) 
                 f"git subtree add failed. Ensure git-subtree is installed. Original error:\n{e}"
             ) from e
         print(f"Vendored {name} at {tag} into {target_path} using git subtree.")
-        print("Next: commit the new rule directory in your repo.")
         return
 
     prefix = os.path.relpath(target_path, os.getcwd())
@@ -204,7 +223,6 @@ def link_rule(spec: str, subtree: bool = False, *, skip_existing: bool = False) 
     run(["git", "-C", prefix, "checkout", tag])
 
     print(f"Linked {name} at {tag} into {target_path}.")
-    print("Next: commit .gitmodules and the submodule directory in your repo.")
 
 def _fetch_text(url: str) -> str:
     try:
@@ -231,69 +249,111 @@ def parse_ruleset_names(text: str) -> List[str]:
             name = token.strip()
             if not name or name.startswith(".") or name.startswith("_"):
                 continue
-            if ":" in name:
-                raise ValueError(f"Rulesets do not pin versions. Found '{name}'.")
             if name in seen:
                 continue
             seen.add(name)
             names.append(name)
     return names
 
+def apply_rulesets(subtree: bool = False) -> None:
+    rules_dir = ensure_rules_dir()
+    sets_dir = os.path.join(rules_dir, "_ccrulesets")
+    if not os.path.isdir(sets_dir):
+        return
+
+    requirements: Dict[str, List[Tuple[str, Optional[str]]]] = {}
+
+    for filename in os.listdir(sets_dir):
+        if not filename.endswith(".txt"):
+            continue
+        path = os.path.join(sets_dir, filename)
+        content = open(path, "r", encoding="utf-8").read()
+        
+        specs = parse_ruleset_names(content)
+        for spec in specs:
+            name, tag = parse_name_and_tag(spec)
+            requirements.setdefault(name, []).append((filename, tag))
+
+    for rule, reqs in requirements.items():
+        resolved_versions = []
+        has_wildcard = False
+        
+        for src, tag in reqs:
+            if tag:
+                m = TAG_RE.match(tag)
+                if m:
+                    resolved_versions.append((int(m.group(1)), tag))
+            else:
+                has_wildcard = True
+        
+        target_tag = None
+        
+        if has_wildcard:
+            latest = get_latest_remote_tag(rule)
+            if latest:
+                m = TAG_RE.match(latest)
+                if m:
+                    resolved_versions.append((int(m.group(1)), latest))
+        
+        if not resolved_versions:
+            print(f"Warning: No valid versions found for {rule} (requested by rulesets). Skipping.")
+            continue
+            
+        max_ver, max_tag = max(resolved_versions, key=lambda x: x[0])
+        
+        print(f"Enforcing {rule}:{max_tag} (from rulesets)...")
+        link_rule(f"{rule}:{max_tag}", subtree=subtree, skip_existing=False)
+
 def link_ruleset(ruleset_name: str, *, subtree: bool = False) -> None:
     if not ruleset_name or "/" in ruleset_name or ".." in ruleset_name:
         raise ValueError("Invalid ruleset name.")
     url = RULESETS_RAW_URL_TEMPLATE.format(name=ruleset_name)
     text = _fetch_text(url)
-    names = parse_ruleset_names(text)
-    if not names:
-        raise RuntimeError(f"Ruleset '{ruleset_name}' is empty or not found: {url}")
+    
+    if not text.strip():
+        raise RuntimeError(f"Ruleset '{ruleset_name}' is empty or not found.")
 
-    repos = {r.name: r for r in list_repos(include_untagged=True)}
-    for name in names:
-        repo = repos.get(name)
-        if not repo:
-            print(f"Skipping {name}: not found in org.")
-            continue
-        if "v0" not in repo.tags:
-            print(f"Skipping {name}: rulesets require v0 tag.")
-            continue
-        link_rule(name, subtree=subtree, skip_existing=True)
+    rules_dir = ensure_rules_dir()
+    sets_dir = os.path.join(rules_dir, "_ccrulesets")
+    os.makedirs(sets_dir, exist_ok=True)
+    
+    local_path = os.path.join(sets_dir, f"{ruleset_name}.txt")
+    with open(local_path, "w", encoding="utf-8") as f:
+        f.write(text)
+        
+    print(f"Downloaded ruleset definition to {local_path}")
+    apply_rulesets(subtree=subtree)
 
 def link_ruleset_file(path: str, *, subtree: bool = False) -> None:
     if not path:
         raise ValueError("Ruleset file path is required.")
     if not os.path.isfile(path):
         raise RuntimeError(f"Ruleset file not found: {path}")
+    
     text = open(path, "r", encoding="utf-8").read()
-    names = parse_ruleset_names(text)
-    if not names:
-        raise RuntimeError(f"No rule names found in file: {path}")
-
-    repos = {r.name: r for r in list_repos(include_untagged=True)}
-    for name in names:
-        repo = repos.get(name)
-        if not repo:
-            print(f"Skipping {name}: not found in org.")
-            continue
-        if "v0" not in repo.tags:
-            print(f"Skipping {name}: rulesets require v0 tag.")
-            continue
-        link_rule(name, subtree=subtree, skip_existing=True)
+    name = os.path.basename(path).replace(".txt", "")
+    
+    rules_dir = ensure_rules_dir()
+    sets_dir = os.path.join(rules_dir, "_ccrulesets")
+    os.makedirs(sets_dir, exist_ok=True)
+    
+    local_path = os.path.join(sets_dir, f"{name}.txt")
+    with open(local_path, "w", encoding="utf-8") as f:
+        f.write(text)
+        
+    print(f"Copied local ruleset to {local_path}")
+    apply_rulesets(subtree=subtree)
 
 def copy_rule(spec: str) -> None:
     name, requested_tag = parse_name_and_tag(spec)
     if not name:
         raise ValueError("Rule name is required.")
 
-    repos = {r.name: r for r in list_repos(include_untagged=True)}
-    if name not in repos:
-        available = ", ".join(sorted(repos.keys()))
-        raise RuntimeError(f"Unknown rule '{name}'. Available: {available}")
-
-    repo = repos[name]
-    tag = requested_tag or repo.latest_tag
-    if tag is None:
-        raise RuntimeError(f"Rule '{name}' has no vN tags to copy.")
+    tag = requested_tag
+    if not tag:
+        tag = get_latest_remote_tag(name)
+        if not tag:
+            raise RuntimeError(f"Rule '{name}' has no vN tags.")
 
     rules_dir = ensure_rules_dir()
     target_path = os.path.join(rules_dir, name)
@@ -423,26 +483,25 @@ TODO: Describe the rule precisely.
     )
 
 def update_rules(latest: bool = False) -> None:
+    apply_rulesets()
+
     rules_dir = ensure_rules_dir()
-    print(f"Checking rules in {rules_dir}...")
+    print(f"Checking individual rules in {rules_dir}...")
     
     for name in sorted(os.listdir(rules_dir)):
         rule_path = os.path.join(rules_dir, name)
-        if not os.path.isdir(rule_path):
+        if not os.path.isdir(rule_path) or name == "_ccrulesets":
             continue
         
-        # Check if submodule (has .git file)
         if not os.path.exists(os.path.join(rule_path, ".git")):
             continue
 
-        # Fetch tags
         try:
             run(["git", "fetch", "--tags"], cwd=rule_path)
         except RuntimeError:
             print(f"Skipping {name}: failed to fetch tags.")
             continue
 
-        # Get current tag
         current_tag = ""
         try:
             proc = subprocess.run(
@@ -457,7 +516,6 @@ def update_rules(latest: bool = False) -> None:
         except Exception:
             pass
 
-        # Get all available vN tags
         proc = subprocess.run(
             ["git", "tag", "-l", "v*"],
             cwd=rule_path,
@@ -487,7 +545,6 @@ def update_rules(latest: bool = False) -> None:
         message = ""
 
         if not current_tag:
-            # Not on a tag
             print(f"{name}: not on a specific version tag. Skipping.")
             continue
 
@@ -499,19 +556,15 @@ def update_rules(latest: bool = False) -> None:
         current_ver = int(match.group(1))
 
         if current_ver == 0:
-            # v0 (Volatile)
             if max_ver > 0:
-                # Promotion: v0 -> v1+
                 target_tag = max_tag
                 action = "update"
                 message = f"v0 (volatile) -> {target_tag} (stable)"
             else:
-                # Refresh v0
                 target_tag = "v0"
                 action = "update"
                 message = "refreshing v0"
         else:
-            # v1+ (Stable)
             if max_ver > current_ver:
                 if latest:
                     target_tag = max_tag
