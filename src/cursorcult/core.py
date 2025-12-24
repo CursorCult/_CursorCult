@@ -145,14 +145,14 @@ def ensure_rules_dir() -> str:
         )
     return rules_dir
 
-
 def run(cmd: List[str], cwd: Optional[str] = None) -> None:
     proc = subprocess.run(
         cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"Command failed: {' '.join(cmd)}\n{proc.stderr.strip() or proc.stdout.strip()}"
+            f"Command failed: {' '.join(cmd)}
+{proc.stderr.strip() or proc.stdout.strip()}"
         )
 
 def get_latest_remote_tag(name: str) -> Optional[str]:
@@ -285,8 +285,6 @@ def apply_rulesets(subtree: bool = False) -> None:
                     resolved_versions.append((int(m.group(1)), tag))
             else:
                 has_wildcard = True
-        
-        target_tag = None
         
         if has_wildcard:
             latest = get_latest_remote_tag(rule)
@@ -481,6 +479,61 @@ TODO: Describe the rule precisely.
     print(
         "Convention: develop on main until ready for v0, then squash commits and tag v0."
     )
+
+def register_rule(url: str) -> None:
+    if not url.startswith("http") and not url.startswith("git@"):
+        raise ValueError("Invalid URL format.")
+        
+    parts = url.rstrip("/").replace(".git", "").split("/")
+    if len(parts) < 2:
+        raise ValueError("Cannot parse repo owner/name from URL.")
+    
+    repo_name = parts[-1]
+    owner = parts[-2].split(":")[-1]
+    
+    print(f"Validating {owner}/{repo_name}...")
+    
+    with tempfile.TemporaryDirectory(prefix="cursorcult-reg-") as tmp:
+        clone_dir = os.path.join(tmp, repo_name)
+        try:
+            run(["git", "clone", "--depth", "1", url, clone_dir])
+        except Exception as e:
+            raise RuntimeError(f"Failed to clone {url}: {e}")
+            
+        if not os.path.isfile(os.path.join(clone_dir, "RULE.md")):
+            raise RuntimeError("Repo missing RULE.md. Not a valid CursorCult rule pack.")
+            
+        license_path = os.path.join(clone_dir, "LICENSE")
+        is_unlicense = False
+        if os.path.isfile(license_path):
+            content = open(license_path, "r", encoding="utf-8").read()
+            if "public domain" in content.lower() or "unlicense" in content.lower():
+                is_unlicense = True
+        
+        description = "No description provided."
+        rule_content = open(os.path.join(clone_dir, "RULE.md"), "r", encoding="utf-8").read()
+        m = re.search(r'^description:\s*["\\]?(.*?)["\\]?$', rule_content, re.MULTILINE)
+        if m:
+            description = m.group(1)
+            
+yaml_content = f"""name: {repo_name}
+description: "{description}"
+source_url: "{url}"
+maintainer: "{owner}"
+"""
+    
+    filename = f"{repo_name}.yml"
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(yaml_content)
+        
+    print(f"\nSUCCESS: Validation passed.")
+    if is_unlicense:
+        print("License: Unlicense (Eligible for showcase!)")
+    else:
+        print("License: Not detected as Unlicense (Standard listing)")
+        
+    print(f"\nSubmission file generated: {filename}")
+    print(f"Next step: Open a PR to https://github.com/CursorCult/_intake adding this file to 'submissions/'.")
 
 def update_rules(latest: bool = False) -> None:
     apply_rulesets()

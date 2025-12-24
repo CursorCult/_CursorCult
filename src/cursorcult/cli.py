@@ -80,6 +80,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Force update to the absolute latest version (upgrades stable versions).",
     )
+    register_parser = subparsers.add_parser(
+        "register", help="Propose adding your rule/ruleset to the CursorCult registry."
+    )
+    register_parser.add_argument("url", help="GitHub URL of your rule repository.")
 
     args = parser.parse_args(argv)
 
@@ -87,6 +91,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.command in (None, "list"):
             repos = list_repos()
             print_repos(repos)
+            return 0
+        if args.command == "register":
+            from .core import register_rule
+            register_rule(args.url)
             return 0
         if args.command == "update":
             from .core import update_rules
