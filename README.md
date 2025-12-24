@@ -67,7 +67,7 @@ To install directly from GitHub:
 pipx install git+https://github.com/CursorCult/_CursorCult.git
 ```
 
-**Web Search:** Browse and filter all community rules at [cursorcult.github.io/_CursorCult](https://cursorcult.github.io/_CursorCult/).
+**Web Search:** Browse and filter all community rules at [cursorcult.github.io](https://cursorcult.github.io/).
 
 This prints the released rules in the organization (repos with a `vN` tag), each repo’s one‑line description, latest tag version, and a link to its `README.md`. Repos without tags are treated as unreleased and are not listed.
 
