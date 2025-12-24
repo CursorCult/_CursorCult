@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CursorCult Registry</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+        h1 { margin-bottom: 1.5rem; }
+        input { width: 100%; padding: 0.8rem; font-size: 1rem; margin-bottom: 2rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .card { border: 1px solid #eee; padding: 1.5rem; margin-bottom: 1rem; border-radius: 6px; transition: box-shadow 0.2s; }
+        .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h3 { margin: 0 0 0.5rem 0; font-size: 1.25rem; }
+        .card h3 a { color: #0366d6; text-decoration: none; }
+        .card h3 a:hover { text-decoration: underline; }
+        .desc { color: #333; margin-bottom: 0.8rem; }
+        .meta { color: #666; font-size: 0.85rem; display: flex; gap: 1rem; }
+        .badge { background: #f6f8fa; padding: 2px 6px; border-radius: 12px; border: 1px solid #d1d5da; }
+        .unlicense { color: #22863a; border-color: #28a745; background: #f0fff4; }
+    </style>
+</head>
+<body>
+    <h1>CursorCult Registry</h1>
+    <input type="text" id="search" placeholder="Search rules by name or description..." onkeyup="filterRules()">
+    <div id="list">Loading registry...</div>
+
+    <script>
+        let rules = [];
+        
+        async function load() {
+            try {
+                // Fetch from _intake (raw)
+                const resp = await fetch('https://raw.githubusercontent.com/CursorCult/_intake/main/registry.json');
+                if (!resp.ok) throw new Error('Failed to load registry');
+                const data = await resp.json();
+                rules = Object.values(data);
+                
+                rules.sort((a, b) => {
+                    if (a.license === 'Unlicense' && b.license !== 'Unlicense') return -1;
+                    if (a.license !== 'Unlicense' && b.license === 'Unlicense') return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                render(rules);
+            } catch (e) {
+                document.getElementById('list').innerText = 'Error loading registry: ' + e.message;
+            }
+        }
+
+        function render(items) {
+            const list = document.getElementById('list');
+            if (items.length === 0) {
+                list.innerHTML = '<p>No rules found.</p>';
+                return;
+            }
+            list.innerHTML = items.map(r => {
+                const isUnlicense = r.license === 'Unlicense';
+                const licClass = isUnlicense ? 'badge unlicense' : 'badge';
+                return `
+                <div class="card">
+                    <h3><a href="${r.source_url}" target="_blank">${r.name}</a></h3>
+                    <div class="desc">${r.description || 'No description provided.'}</div>
+                    <div class="meta">
+                        <span class="${licClass}">${r.license}</span>
+                        <span>Maintainer: <strong>@${r.maintainer}</strong></span>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function filterRules() {
+            const term = document.getElementById('search').value.toLowerCase();
+            const filtered = rules.filter(r => 
+                r.name.toLowerCase().includes(term) || 
+                (r.description && r.description.toLowerCase().includes(term))
+            );
+            render(filtered);
+        }
+
+        load();
+    </script>
+</body>
+</html>
