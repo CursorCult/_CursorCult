@@ -89,7 +89,7 @@ def github_request(method: str, url: str, data: Optional[Dict[str, Any]] = None)
         with urllib.request.urlopen(req, timeout=20) as resp:
             raw = resp.read()
             if not raw:
-                return {}
+                return {{}}
             return json.loads(raw.decode("utf-8"))
     except urllib.error.HTTPError as e:
         msg = e.read().decode("utf-8", errors="ignore")
@@ -147,16 +147,15 @@ def ensure_rules_dir() -> str:
         )
     return rules_dir
 
-
 def run(cmd: List[str], cwd: Optional[str] = None) -> None:
     proc = subprocess.run(
         cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"Command failed: {' '.join(cmd)}\n{proc.stderr.strip() or proc.stdout.strip()}"
+            f"Command failed: {' '.join(cmd)}
+{proc.stderr.strip() or proc.stdout.strip()}"
         )
-
 
 def link_rule(spec: str, subtree: bool = False, *, skip_existing: bool = False) -> None:
     name, requested_tag = parse_name_and_tag(spec)
@@ -207,7 +206,6 @@ def link_rule(spec: str, subtree: bool = False, *, skip_existing: bool = False) 
     print(f"Linked {name} at {tag} into {target_path}.")
     print("Next: commit .gitmodules and the submodule directory in your repo.")
 
-
 def _fetch_text(url: str) -> str:
     try:
         with urllib.request.urlopen(url, timeout=20) as resp:
@@ -221,7 +219,6 @@ def _fetch_text(url: str) -> str:
         raise RuntimeError(f"Failed to fetch {url}: HTTP {e.code} {body or e.reason}") from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"Network error fetching {url}: {e}") from e
-
 
 def parse_ruleset_names(text: str) -> List[str]:
     names: List[str] = []
@@ -241,7 +238,6 @@ def parse_ruleset_names(text: str) -> List[str]:
             seen.add(name)
             names.append(name)
     return names
-
 
 def link_ruleset(ruleset_name: str, *, subtree: bool = False) -> None:
     if not ruleset_name or "/" in ruleset_name or ".." in ruleset_name:
@@ -263,7 +259,6 @@ def link_ruleset(ruleset_name: str, *, subtree: bool = False) -> None:
             continue
         link_rule(name, subtree=subtree, skip_existing=True)
 
-
 def link_ruleset_file(path: str, *, subtree: bool = False) -> None:
     if not path:
         raise ValueError("Ruleset file path is required.")
@@ -284,7 +279,6 @@ def link_ruleset_file(path: str, *, subtree: bool = False) -> None:
             print(f"Skipping {name}: rulesets require v0 tag.")
             continue
         link_rule(name, subtree=subtree, skip_existing=True)
-
 
 def copy_rule(spec: str) -> None:
     name, requested_tag = parse_name_and_tag(spec)
@@ -324,9 +318,8 @@ def copy_rule(spec: str) -> None:
     print(f"Copied {name} at {tag} into {target_path}.")
     print("Next: commit the copied rule directory in your repo.")
 
-
 def new_rule_repo(name: str, description: Optional[str] = None) -> None:
-    if not name or not re.match(r"^[A-Za-z0-9._-]+$", name):
+    if not name or not re.match(r"^[A-Za-z0-9._-]+", name):
         raise ValueError(
             "Invalid repo name. Use only letters, numbers, '.', '_', and '-'."
         )
@@ -386,7 +379,8 @@ Rule file format reference: https://cursor.com/docs/context/rules#rulemd-file-fo
     with open(os.path.join(name, "README.md"), "w", encoding="utf-8") as f:
         f.write(readme)
 
-    rules_md = f"""---
+    rules_md = f"""
+---
 description: "{repo_description}"
 alwaysApply: true
 ---
@@ -427,3 +421,108 @@ TODO: Describe the rule precisely.
     print(
         "Convention: develop on main until ready for v0, then squash commits and tag v0."
     )
+
+def update_rules(latest: bool = False) -> None:
+    rules_dir = ensure_rules_dir()
+    print(f"Checking rules in {rules_dir}...")
+    
+    for name in sorted(os.listdir(rules_dir)):
+        rule_path = os.path.join(rules_dir, name)
+        if not os.path.isdir(rule_path):
+            continue
+        
+        # Check if submodule (has .git file)
+        if not os.path.exists(os.path.join(rule_path, ".git")):
+            continue
+
+        # Fetch tags
+        try:
+            run(["git", "fetch", "--tags"], cwd=rule_path)
+        except RuntimeError:
+            print(f"Skipping {name}: failed to fetch tags.")
+            continue
+
+        # Get current tag
+        current_tag = ""
+        try:
+            proc = subprocess.run(
+                ["git", "describe", "--tags", "--exact-match", "HEAD"],
+                cwd=rule_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            if proc.returncode == 0:
+                current_tag = proc.stdout.strip()
+        except Exception:
+            pass
+
+        # Get all available vN tags
+        proc = subprocess.run(
+            ["git", "tag", "-l", "v*"],
+            cwd=rule_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        tags = [t for t in proc.stdout.splitlines() if TAG_RE.match(t)]
+        
+        if not tags:
+            print(f"{name}: no versions found.")
+            continue
+            
+        parsed_tags = []
+        for t in tags:
+            m = TAG_RE.match(t)
+            if m:
+                parsed_tags.append((int(m.group(1)), t))
+        
+        if not parsed_tags:
+            continue
+            
+        max_ver, max_tag = max(parsed_tags, key=lambda x: x[0])
+        
+        target_tag = current_tag
+        action = "none"
+        message = ""
+
+        if not current_tag:
+            # Not on a tag
+            print(f"{name}: not on a specific version tag. Skipping.")
+            continue
+
+        match = TAG_RE.match(current_tag)
+        if not match:
+            print(f"{name}: current tag '{current_tag}' unknown format. Skipping.")
+            continue
+            
+        current_ver = int(match.group(1))
+
+        if current_ver == 0:
+            # v0 (Volatile)
+            if max_ver > 0:
+                # Promotion: v0 -> v1+
+                target_tag = max_tag
+                action = "update"
+                message = f"v0 (volatile) -> {target_tag} (stable)"
+            else:
+                # Refresh v0
+                target_tag = "v0"
+                action = "update"
+                message = "refreshing v0"
+        else:
+            # v1+ (Stable)
+            if max_ver > current_ver:
+                if latest:
+                    target_tag = max_tag
+                    action = "update"
+                    message = f"{current_tag} -> {max_tag} (forced)"
+                else:
+                    action = "notify"
+                    print(f"{name}: update available {current_tag} -> {max_tag}. Use --latest to apply.")
+            else:
+                pass
+
+        if action == "update":
+            run(["git", "checkout", target_tag], cwd=rule_path)
+            print(f"{name}: updated ({message})")

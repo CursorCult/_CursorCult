@@ -72,6 +72,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         dest="name_override",
         help="Override repo name for README/front matter checks.",
     )
+    update_parser = subparsers.add_parser(
+        "update", help="Update installed rule packs based on versioning policy."
+    )
+    update_parser.add_argument(
+        "--latest",
+        action="store_true",
+        help="Force update to the absolute latest version (upgrades stable versions).",
+    )
 
     args = parser.parse_args(argv)
 
@@ -79,6 +87,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.command in (None, "list"):
             repos = list_repos()
             print_repos(repos)
+            return 0
+        if args.command == "update":
+            from .core import update_rules
+            update_rules(latest=args.latest)
             return 0
         if args.command == "link":
             if args.ruleset and args.ruleset_file:
