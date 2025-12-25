@@ -100,6 +100,8 @@ def list_repos(include_untagged: bool = False) -> List[RepoInfo]:
     repos_raw = http_json(f"{API_BASE}/orgs/{ORG}/repos?per_page=200&type=public")
     repos: List[RepoInfo] = []
     for r in repos_raw:
+        if r.get("archived"):
+            continue
         name = r.get("name", "")
         if not name or name.startswith(".") or name.startswith("_"):
             continue
@@ -151,8 +153,8 @@ def run(cmd: List[str], cwd: Optional[str] = None) -> None:
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"Command failed: {' '.join(cmd)}
-{proc.stderr.strip() or proc.stdout.strip()}"
+            f"Command failed: {' '.join(cmd)}\n"
+            f"{proc.stderr.strip() or proc.stdout.strip()}"
         )
 
 def get_latest_remote_tag(name: str) -> Optional[str]:
@@ -516,7 +518,7 @@ def register_rule(url: str) -> None:
         if m:
             description = m.group(1)
             
-yaml_content = f"""name: {repo_name}
+    yaml_content = f"""name: {repo_name}
 description: "{description}"
 source_url: "{url}"
 maintainer: "{owner}"
