@@ -27,6 +27,7 @@ class RepoInfo:
     name: str
     description: str
     tags: List[str]
+    default_branch: str = "main"
 
     @property
     def latest_tag(self) -> Optional[str]:
@@ -102,13 +103,23 @@ def list_repos(include_untagged: bool = False) -> List[RepoInfo]:
     for r in repos_raw:
         if r.get("archived"):
             continue
+        if r.get("fork"):
+            continue
         name = r.get("name", "")
         if not name or name.startswith(".") or name.startswith("_"):
             continue
+        if name.endswith(".github.io"):
+            continue
+        default_branch = r.get("default_branch") or "main"
         description = (r.get("description") or "").strip() or "no description"
         tags_raw = http_json(f"{API_BASE}/repos/{ORG}/{name}/tags?per_page=100")
         tags = [t.get("name", "") for t in tags_raw if t.get("name")]
-        repo_info = RepoInfo(name=name, description=description, tags=tags)
+        repo_info = RepoInfo(
+            name=name,
+            description=description,
+            tags=tags,
+            default_branch=default_branch,
+        )
         if not include_untagged and repo_info.latest_tag is None:
             continue
         repos.append(repo_info)

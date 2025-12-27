@@ -2,6 +2,7 @@ import argparse
 import sys
 from typing import List, Optional
 
+from . import __version__
 from .ccverify import verify_repo
 from .core import (
     copy_rule,
@@ -19,6 +20,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         prog="cursorcult",
         description="List and link CursorCult rule packs.",
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("list", help="List rule packs (default).")
@@ -89,6 +91,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     try:
         if args.command in (None, "list"):
+            print("Fetching CursorCult rules...", file=sys.stderr)
             repos = list_repos()
             print_repos(repos)
             return 0

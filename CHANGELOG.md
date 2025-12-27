@@ -4,6 +4,11 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
+## v0.11.5
+
+- `cursorcult --version` now reports the CLI version.
+- `cursorcult list` prints a status line before fetching the registry.
+
 ## v0.11.2
 
 - `cursorcult link` and `cursorcult link --subtree` now write relative paths (no absolute `.gitmodules` entries).
