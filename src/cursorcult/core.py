@@ -180,6 +180,18 @@ def get_current_tag(cwd: str) -> str:
         return proc.stdout.strip()
     return ""
 
+def get_head_sha(cwd: str) -> str:
+    proc = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return proc.stdout.strip()
+    return ""
+
 def get_latest_remote_tag(name: str) -> Optional[str]:
     """Fetch latest vN tag for a repo from GitHub API."""
     try:
@@ -617,6 +629,7 @@ def update_rules(latest: bool = False) -> None:
         target_tag = current_tag
         action = "none"
         message = ""
+        up_to_date_message = ""
 
         if not current_tag:
             print(f"{name}: not on a specific version tag. Skipping.")
@@ -634,22 +647,35 @@ def update_rules(latest: bool = False) -> None:
                 target_tag = max_tag
                 action = "update"
                 message = f"v0 (volatile) -> {target_tag} (stable)"
+                up_to_date_message = f"up-to-date ({target_tag})"
             else:
                 target_tag = "v0"
                 action = "update"
                 message = "refreshing v0"
+                up_to_date_message = "up-to-date (v0)"
         else:
             if max_ver > current_ver:
                 if latest:
                     target_tag = max_tag
                     action = "update"
                     message = f"{current_tag} -> {max_tag} (forced)"
+                    up_to_date_message = f"up-to-date ({max_tag})"
                 else:
                     action = "notify"
                     print(f"{name}: update available {current_tag} -> {max_tag}. Use --latest to apply.")
             else:
-                pass
+                up_to_date_message = f"up-to-date ({current_tag})"
 
         if action == "update":
+            before_sha = get_head_sha(rule_path)
             run(["git", "checkout", target_tag], cwd=rule_path)
-            print(f"{name}: updated ({message})")
+            after_sha = get_head_sha(rule_path)
+            if before_sha and after_sha and before_sha == after_sha:
+                if up_to_date_message:
+                    print(f"{name}: {up_to_date_message}")
+                else:
+                    print(f"{name}: up-to-date")
+            else:
+                print(f"{name}: updated ({message})")
+        elif action == "none" and up_to_date_message:
+            print(f"{name}: {up_to_date_message}")

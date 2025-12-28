@@ -4,6 +4,10 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
+## v0.11.7
+
+- `cursorcult update` now reports `up-to-date` when no changes occurred.
+
 ## v0.11.6
 
 - `cursorcult update` now only force-refreshes tags for repos pinned to `v0`.
