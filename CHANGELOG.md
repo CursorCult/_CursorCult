@@ -4,6 +4,11 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
+## v0.11.8
+
+- `cursorcult update` now ignores non-CursorCult repos.
+- `cursorcult update` accepts a path or rule name to update a specific rule.
+
 ## v0.11.7
 
 - `cursorcult update` now reports `up-to-date` when no changes occurred.
