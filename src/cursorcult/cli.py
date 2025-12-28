@@ -78,6 +78,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "update", help="Update installed rule packs based on versioning policy."
     )
     update_parser.add_argument(
+        "path",
+        nargs="?",
+        help="Optional path to a rules directory or a specific rule repo.",
+    )
+    update_parser.add_argument(
         "--latest",
         action="store_true",
         help="Force update to the absolute latest version (upgrades stable versions).",
@@ -101,7 +106,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 0
         if args.command == "update":
             from .core import update_rules
-            update_rules(latest=args.latest)
+            update_rules(latest=args.latest, path=args.path)
             return 0
         if args.command == "link":
             if args.ruleset and args.ruleset_file:

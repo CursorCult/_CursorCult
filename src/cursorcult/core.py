@@ -192,6 +192,38 @@ def get_head_sha(cwd: str) -> str:
         return proc.stdout.strip()
     return ""
 
+def canonicalize_rule_path(path: str) -> str:
+    target_path = os.path.abspath(path)
+    if os.path.isdir(target_path):
+        return target_path
+    if os.path.sep in path:
+        raise RuntimeError(f"Path not found: {path}")
+    rules_dir = ensure_rules_dir()
+    target_path = os.path.join(rules_dir, path)
+    if not os.path.isdir(target_path):
+        raise RuntimeError(f"Path not found: {path}")
+    return target_path
+
+def is_cursorcult_repo(cwd: str) -> bool:
+    proc = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"],
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    url = proc.stdout.strip()
+    if not url:
+        return False
+    return (
+        f"github.com/{ORG}/" in url
+        or f"github.com:{ORG}/" in url
+        or f"git@github.com:{ORG}/" in url
+        or f"ssh://git@github.com/{ORG}/" in url
+    )
+
 def get_latest_remote_tag(name: str) -> Optional[str]:
     """Fetch latest vN tag for a repo from GitHub API."""
     try:
@@ -572,18 +604,31 @@ maintainer: "{owner}"
     print(f"\nSubmission file generated: {filename}")
     print(f"Next step: Open a PR to https://github.com/CursorCult/_intake adding this file to 'submissions/'.")
 
-def update_rules(latest: bool = False) -> None:
+def update_rules(latest: bool = False, path: Optional[str] = None) -> None:
     apply_rulesets()
 
-    rules_dir = ensure_rules_dir()
-    print(f"Checking individual rules in {rules_dir}...")
-    
-    for name in sorted(os.listdir(rules_dir)):
-        rule_path = os.path.join(rules_dir, name)
-        if not os.path.isdir(rule_path) or name == "_ccrulesets":
-            continue
-        
+    if path:
+        target_path = canonicalize_rule_path(path)
+    else:
+        target_path = ensure_rules_dir()
+
+    if os.path.isdir(os.path.join(target_path, ".git")):
+        rules = [(os.path.basename(target_path), target_path)]
+        print(f"Checking rule in {target_path}...")
+    else:
+        print(f"Checking individual rules in {target_path}...")
+        rules = []
+        for name in sorted(os.listdir(target_path)):
+            rule_path = os.path.join(target_path, name)
+            if not os.path.isdir(rule_path) or name == "_ccrulesets":
+                continue
+            rules.append((name, rule_path))
+
+    for name, rule_path in rules:
         if not os.path.exists(os.path.join(rule_path, ".git")):
+            continue
+        if not is_cursorcult_repo(rule_path):
+            print(f"Skipping {name}: not a CursorCult repo.")
             continue
 
         current_tag = get_current_tag(rule_path)
