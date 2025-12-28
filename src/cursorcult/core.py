@@ -168,6 +168,18 @@ def run(cmd: List[str], cwd: Optional[str] = None) -> None:
             f"{proc.stderr.strip() or proc.stdout.strip()}"
         )
 
+def get_current_tag(cwd: str) -> str:
+    proc = subprocess.run(
+        ["git", "describe", "--tags", "--exact-match", "HEAD"],
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return proc.stdout.strip()
+    return ""
+
 def get_latest_remote_tag(name: str) -> Optional[str]:
     """Fetch latest vN tag for a repo from GitHub API."""
     try:
@@ -562,25 +574,21 @@ def update_rules(latest: bool = False) -> None:
         if not os.path.exists(os.path.join(rule_path, ".git")):
             continue
 
+        current_tag = get_current_tag(rule_path)
         try:
             run(["git", "fetch", "--tags"], cwd=rule_path)
-        except RuntimeError:
-            print(f"Skipping {name}: failed to fetch tags.")
-            continue
+        except RuntimeError as e:
+            if "would clobber existing tag" in str(e) and current_tag == "v0":
+                try:
+                    run(["git", "fetch", "--tags", "--force"], cwd=rule_path)
+                except RuntimeError:
+                    print(f"Skipping {name}: failed to fetch tags.")
+                    continue
+            else:
+                print(f"Skipping {name}: failed to fetch tags.")
+                continue
 
-        current_tag = ""
-        try:
-            proc = subprocess.run(
-                ["git", "describe", "--tags", "--exact-match", "HEAD"],
-                cwd=rule_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            if proc.returncode == 0:
-                current_tag = proc.stdout.strip()
-        except Exception:
-            pass
+        current_tag = get_current_tag(rule_path)
 
         proc = subprocess.run(
             ["git", "tag", "-l", "v*"],
