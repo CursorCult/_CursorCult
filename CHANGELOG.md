@@ -4,6 +4,10 @@ All notable changes to `_CursorCult` and the `cursorcult` CLI are documented her
 
 This project uses semantic versioning (`vX.Y.Z`).
 
+## v0.11.9
+
+- Release bump (no functional changes).
+
 ## v0.11.8
 
 - `cursorcult update` now ignores non-CursorCult repos.
