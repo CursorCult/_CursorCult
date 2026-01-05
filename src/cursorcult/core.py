@@ -160,6 +160,12 @@ def ensure_rules_dir() -> str:
         )
     return rules_dir
 
+def find_rules_dir() -> Optional[str]:
+    rules_dir = os.path.join(os.getcwd(), ".cursor", "rules")
+    if os.path.isdir(rules_dir):
+        return rules_dir
+    return None
+
 def run(cmd: List[str], cwd: Optional[str] = None) -> None:
     proc = subprocess.run(
         cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
@@ -360,6 +366,75 @@ def get_head_sha(cwd: str) -> str:
     if proc.returncode == 0:
         return proc.stdout.strip()
     return ""
+
+def get_head_ref(cwd: str) -> str:
+    current_tag = get_current_tag(cwd)
+    if current_tag:
+        return current_tag
+    proc = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        ref = proc.stdout.strip()
+        if ref and ref != "HEAD":
+            return ref
+    proc = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        sha = proc.stdout.strip()
+        if sha:
+            return sha
+    return "unknown"
+
+def get_origin_url(cwd: str) -> str:
+    proc = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"],
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return proc.stdout.strip()
+    return ""
+
+def list_installed_rules() -> None:
+    rules_dir = find_rules_dir()
+    if not rules_dir:
+        print("No .cursor/rules directory found.")
+        print("Use `cursorcult link <NAME>` or `cursorcult list --remote`.")
+        return
+
+    rules = []
+    for name in sorted(os.listdir(rules_dir)):
+        rule_path = os.path.join(rules_dir, name)
+        if not os.path.isdir(rule_path) or name == "_ccrulesets":
+            continue
+        rules.append((name, rule_path))
+
+    if not rules:
+        print("No rules installed in .cursor/rules.")
+        return
+
+    for name, rule_path in rules:
+        if os.path.isdir(os.path.join(rule_path, ".git")):
+            ref = get_head_ref(rule_path)
+            origin = get_origin_url(rule_path)
+            line = f"{name:<20} {ref}"
+            if origin:
+                line += f"\n{' ' * 25}{origin}"
+            print(line)
+        else:
+            print(f"{name:<20} unversioned")
 
 def canonicalize_rule_path(path: str) -> str:
     target_path = os.path.abspath(path)

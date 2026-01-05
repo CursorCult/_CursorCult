@@ -23,7 +23,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
-    subparsers.add_parser("list", help="List rule packs (default).")
+    list_parser = subparsers.add_parser("list", help="List rule packs.")
+    list_parser.add_argument(
+        "--remote",
+        action="store_true",
+        help="List available CursorCult rule packs from GitHub.",
+    )
     link_parser = subparsers.add_parser(
         "link", help="Link a rule pack (submodule by default)."
     )
@@ -94,10 +99,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        if args.command in (None, "list"):
-            print("Fetching CursorCult rules...", file=sys.stderr)
-            repos = list_repos()
-            print_repos(repos)
+        if args.command is None:
+            parser.print_help()
+            return 0
+        if args.command == "list":
+            if args.remote:
+                print("Fetching CursorCult rules...", file=sys.stderr)
+                repos = list_repos()
+                print_repos(repos)
+                return 0
+            from .core import list_installed_rules
+            list_installed_rules()
             return 0
         if args.command == "register":
             from .core import register_rule

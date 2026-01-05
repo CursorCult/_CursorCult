@@ -71,6 +71,18 @@ pipx install git+https://github.com/CursorCult/_CursorCult.git
 
 This prints the released rules in the organization (repos with a `vN` tag), each repo’s one‑line description, latest tag version, and a link to its `README.md`. Repos without tags are treated as unreleased and are not listed.
 
+List installed rules in your project:
+
+```sh
+cursorcult list
+```
+
+List all available rules from the org:
+
+```sh
+cursorcult list --remote
+```
+
 ## Updating rules
 
 Update all installed rules to the latest tag (defaults to `v0` if available):
