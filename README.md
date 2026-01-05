@@ -118,6 +118,39 @@ cursorcult copy <NAME1> <NAME2> ...
 
 Rule repos use simple integer tags (`v0`, `v1`, `v2`, …). The CLI itself is versioned with semantic versioning (`vX.Y.Z`).
 
+## Evaluating rules programmatically
+
+Rules can define an evaluation workflow that runs generators, validates evidence,
+and evaluates the rule. The CLI supports this via:
+
+```sh
+cursorcult eval <RULE>
+```
+
+The CLI searches upward from `.cursor/rules/<RULE>/RULE.md` for a workflow file
+named `.CC<RULE>` (uppercase). If missing, `eval` fails.
+
+Workflow file format:
+
+- Blank lines and lines starting with `#` are ignored.
+- Line 1: eval args string (use `--` for none).
+- Lines 2..N: generator commands (argv strings).
+
+Generators are run sequentially. If all generator lines include `--output`, it
+must be identical across generators and is passed to `validate.py` and `eval.py`
+as the final argument.
+
+Rules should provide `scripts/validate.py` and `scripts/eval.py` inside their
+rule pack. These are called after generation.
+
+Example for UNO:
+
+```text
+--
+python .cursor/rules/UNO/scripts/generator.py --glob "src/**/*.py" --domain core --output defs.json
+python .cursor/rules/UNO/scripts/generator.py --glob "tests/**/*.py" --domain tests --output defs.json
+```
+
 ## Creating a new rule pack
 
 To propose a new rule pack in the CursorCult org, use the intake repo:

@@ -131,10 +131,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 copy_rule(spec)
             return 0
         if args.command == "eval":
-            from .core import eval_uno
-            if args.name.strip().lower() != "uno":
-                raise ValueError("Only UNO is supported for eval right now.")
-            eval_uno()
+            from .core import eval_rule
+            eval_rule(args.name.strip())
             return 0
         if args.command == "new":
             new_rule_repo(args.name, args.description)
