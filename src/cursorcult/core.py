@@ -181,6 +181,13 @@ def run_stream(cmd: List[str], cwd: Optional[str] = None, env: Optional[Dict[str
     if proc.returncode != 0:
         raise RuntimeError(f"Command failed: {' '.join(cmd)}")
 
+def normalize_python_argv(argv: List[str]) -> List[str]:
+    if not argv:
+        return argv
+    if argv[0] in ("python", "python3"):
+        return [sys.executable, *argv[1:]]
+    return argv
+
 @dataclass(frozen=True)
 class GeneratorSpec:
     argv: List[str]
@@ -321,7 +328,7 @@ def eval_rule(rule_name: str) -> None:
     output_abs = resolve_output_path(cc_dir, output_rel)
 
     for generator in generators:
-        run_stream(generator.argv, cwd=cc_dir)
+        run_stream(normalize_python_argv(generator.argv), cwd=cc_dir)
 
     validate_script = os.path.join(rule_dir, "scripts", "validate.py")
     eval_script = os.path.join(rule_dir, "scripts", "evaluate.py")
@@ -335,7 +342,7 @@ def eval_rule(rule_name: str) -> None:
         env["CC_DOMAINS"] = ",".join(domains)
     validate_cmd = [sys.executable, validate_script, output_abs]
     run_stream(validate_cmd, cwd=cc_dir, env=env)
-    run_stream(eval_cmd, cwd=cc_dir)
+    run_stream(normalize_python_argv(eval_cmd), cwd=cc_dir)
 
 def get_current_tag(cwd: str) -> str:
     proc = subprocess.run(
