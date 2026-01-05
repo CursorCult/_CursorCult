@@ -1,7 +1,9 @@
 import json
 import os
 import re
+import shlex
 import subprocess
+import sys
 import tempfile
 import shutil
 import urllib.error
@@ -167,6 +169,129 @@ def run(cmd: List[str], cwd: Optional[str] = None) -> None:
             f"Command failed: {' '.join(cmd)}\n"
             f"{proc.stderr.strip() or proc.stdout.strip()}"
         )
+
+def run_stream(cmd: List[str], cwd: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> None:
+    proc = subprocess.run(cmd, cwd=cwd, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(f"Command failed: {' '.join(cmd)}")
+
+@dataclass(frozen=True)
+class UnoGeneratorSpec:
+    argv: List[str]
+    domain: str
+    output: str
+
+def find_upwards(start_dir: str, filename: str) -> Optional[str]:
+    current = os.path.abspath(start_dir)
+    while True:
+        candidate = os.path.join(current, filename)
+        if os.path.isfile(candidate):
+            return candidate
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+def extract_flag_value(argv: List[str], flag: str) -> Optional[str]:
+    prefix = f"{flag}="
+    for i, token in enumerate(argv):
+        if token.startswith(prefix):
+            value = token[len(prefix):].strip()
+            return value or None
+        if token == flag and i + 1 < len(argv):
+            return argv[i + 1].strip() or None
+    return None
+
+def parse_ccuno(path: str) -> Tuple[List[str], List[UnoGeneratorSpec], str, List[str]]:
+    raw = open(path, "r", encoding="utf-8").read().splitlines()
+    filtered: List[str] = []
+    for line in raw:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.lstrip().startswith("#"):
+            continue
+        filtered.append(stripped)
+
+    if len(filtered) < 2:
+        raise RuntimeError("Invalid .CCUNO: must contain eval args and at least one generator line.")
+
+    eval_line = filtered[0]
+    eval_args: List[str] = []
+    if eval_line != "--":
+        eval_args = shlex.split(eval_line)
+
+    generators: List[UnoGeneratorSpec] = []
+    domains: List[str] = []
+    output_path: Optional[str] = None
+    seen_domains = set()
+    domain_re = re.compile(r"^[A-Za-z0-9._-]+$")
+
+    for raw_line in filtered[1:]:
+        argv = shlex.split(raw_line)
+        if not argv:
+            raise RuntimeError("Invalid .CCUNO: empty generator line.")
+        domain = extract_flag_value(argv, "--domain")
+        if not domain:
+            raise RuntimeError("Generator missing required --domain flag.")
+        if not domain_re.match(domain):
+            raise RuntimeError(f"Invalid domain '{domain}'.")
+        if domain in seen_domains:
+            raise RuntimeError(f"Duplicate domain '{domain}' in .CCUNO.")
+        output = extract_flag_value(argv, "--output")
+        if not output:
+            raise RuntimeError("Generator missing required --output flag.")
+        if output_path is None:
+            output_path = output
+        elif output != output_path:
+            raise RuntimeError("All generators must use the same --output path.")
+        generators.append(UnoGeneratorSpec(argv=argv, domain=domain, output=output))
+        domains.append(domain)
+        seen_domains.add(domain)
+
+    if output_path is None:
+        raise RuntimeError("Missing --output path in .CCUNO.")
+
+    return eval_args, generators, output_path, domains
+
+def resolve_output_path(root_dir: str, output: str) -> str:
+    if os.path.isabs(output):
+        raise RuntimeError("Generator --output must be a repo-relative path.")
+    output_abs = os.path.abspath(os.path.join(root_dir, output))
+    root_abs = os.path.abspath(root_dir)
+    if os.path.commonpath([output_abs, root_abs]) != root_abs:
+        raise RuntimeError("Generator --output must stay within the repo root.")
+    return output_abs
+
+def eval_uno() -> None:
+    rules_dir = ensure_rules_dir()
+    rule_dir = os.path.join(rules_dir, "UNO")
+    rule_file = os.path.join(rule_dir, "RULE.md")
+    if not os.path.isfile(rule_file):
+        raise RuntimeError("UNO rule not found in .cursor/rules/UNO.")
+
+    ccuno_path = find_upwards(os.path.dirname(rule_file), ".CCUNO")
+    if not ccuno_path:
+        raise RuntimeError("No .CCUNO found when searching upwards from UNO rule.")
+
+    ccuno_dir = os.path.dirname(ccuno_path)
+    eval_args, generators, output_rel, domains = parse_ccuno(ccuno_path)
+    output_abs = resolve_output_path(ccuno_dir, output_rel)
+
+    for generator in generators:
+        run_stream(generator.argv, cwd=ccuno_dir)
+
+    validate_script = os.path.join(rule_dir, "scripts", "validate.py")
+    eval_script = os.path.join(rule_dir, "scripts", "eval.py")
+    if not os.path.isfile(validate_script):
+        raise RuntimeError("UNO validate.py not found in rule scripts.")
+    if not os.path.isfile(eval_script):
+        raise RuntimeError("UNO eval.py not found in rule scripts.")
+
+    env = os.environ.copy()
+    env["CC_DOMAINS"] = ",".join(domains)
+    run_stream([sys.executable, validate_script, output_abs], cwd=ccuno_dir, env=env)
+    run_stream([sys.executable, eval_script, *eval_args, output_abs], cwd=ccuno_dir)
 
 def get_current_tag(cwd: str) -> str:
     proc = subprocess.run(

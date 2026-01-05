@@ -91,6 +91,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         "register", help="Propose adding your rule/ruleset to the CursorCult registry."
     )
     register_parser.add_argument("url", help="GitHub URL of your rule repository.")
+    eval_parser = subparsers.add_parser(
+        "eval", help="Evaluate a rule using its evidence configuration."
+    )
+    eval_parser.add_argument("name", help="Rule name (e.g., UNO).")
 
     args = parser.parse_args(argv)
 
@@ -125,6 +129,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.command == "copy":
             for spec in args.specs:
                 copy_rule(spec)
+            return 0
+        if args.command == "eval":
+            from .core import eval_uno
+            if args.name.strip().lower() != "uno":
+                raise ValueError("Only UNO is supported for eval right now.")
+            eval_uno()
             return 0
         if args.command == "new":
             new_rule_repo(args.name, args.description)
