@@ -165,22 +165,23 @@ named `.CC<RULE>` (uppercase). If missing, `eval` fails.
 Workflow file format:
 
 - Blank lines and lines starting with `#` are ignored.
-- Line 1: eval args string (use `--` for none).
-- Lines 2..N: generator commands (argv strings).
+- Each line is a full command.
+- One line must be an evaluator with `--input <path>`.
+- One or more lines must be generators with `--output <path>` (and for UNO, `--domain <name>`).
+- All generator outputs must match the evaluator input.
 
-Generators are run sequentially. If all generator lines include `--output`, it
-must be identical across generators and is passed to `validate.py` and `eval.py`
-as the final argument.
+Generators are run sequentially, then `scripts/validate.py` is run, then the
+evaluator line is executed.
 
-Rules should provide `scripts/validate.py` and `scripts/eval.py` inside their
+Rules should provide `scripts/validate.py` and `scripts/evaluate.py` inside their
 rule pack. These are called after generation.
 
 Example for UNO:
 
 ```text
---
-python .cursor/rules/UNO/scripts/generator.py --glob "src/**/*.py" --domain core --output defs.json
-python .cursor/rules/UNO/scripts/generator.py --glob "tests/**/*.py" --domain tests --output defs.json
+python .cursor/rules/UNO/scripts/generate.py --glob "src/**/*.py" --domain core --output defs.json
+python .cursor/rules/UNO/scripts/generate.py --glob "tests/**/*.py" --domain tests --output defs.json
+python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
 ## Creating a new rule pack
