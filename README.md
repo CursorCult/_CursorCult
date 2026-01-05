@@ -71,6 +71,26 @@ pipx install git+https://github.com/CursorCult/_CursorCult.git
 
 This prints the released rules in the organization (repos with a `vN` tag), each repo’s one‑line description, latest tag version, and a link to its `README.md`. Repos without tags are treated as unreleased and are not listed.
 
+## Updating rules
+
+Update all installed rules to the latest tag (defaults to `v0` if available):
+
+```sh
+cursorcult update
+```
+
+Update specific rules to specific tags:
+
+```sh
+cursorcult update UNO:v0 KISS:v1
+```
+
+Update a single rule to the latest available tag:
+
+```sh
+cursorcult update UNO
+```
+
 ## Linking a ruleset
 
 Rulesets are named lists of rules registered in `CursorCult/_rulesets`.

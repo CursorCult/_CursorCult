@@ -773,38 +773,39 @@ maintainer: "{owner}"
     print(f"\nSubmission file generated: {filename}")
     print(f"Next step: Open a PR to https://github.com/CursorCult/_intake adding this file to 'submissions/'.")
 
-def update_rules(latest: bool = False, path: Optional[str] = None) -> None:
+def update_rules(specs: Optional[List[str]] = None) -> None:
     apply_rulesets()
 
-    if path:
-        target_path = canonicalize_rule_path(path)
-    else:
-        target_path = ensure_rules_dir()
+    rules_dir = ensure_rules_dir()
+    rules: List[Tuple[str, str, Optional[str]]] = []
 
-    if os.path.isdir(os.path.join(target_path, ".git")):
-        rules = [(os.path.basename(target_path), target_path)]
-        print(f"Checking rule in {target_path}...")
+    if specs:
+        for spec in specs:
+            name, requested_tag = parse_name_and_tag(spec)
+            rule_path = os.path.join(rules_dir, name)
+            if not os.path.isdir(rule_path):
+                print(f"{name}: not found at {rule_path}.")
+                continue
+            rules.append((name, rule_path, requested_tag))
     else:
-        print(f"Checking individual rules in {target_path}...")
-        rules = []
-        for name in sorted(os.listdir(target_path)):
-            rule_path = os.path.join(target_path, name)
+        print(f"Checking individual rules in {rules_dir}...")
+        for name in sorted(os.listdir(rules_dir)):
+            rule_path = os.path.join(rules_dir, name)
             if not os.path.isdir(rule_path) or name == "_ccrulesets":
                 continue
-            rules.append((name, rule_path))
+            rules.append((name, rule_path, None))
 
-    for name, rule_path in rules:
+    for name, rule_path, requested_tag in rules:
         if not os.path.exists(os.path.join(rule_path, ".git")):
             continue
         if not is_cursorcult_repo(rule_path):
             print(f"Skipping {name}: not a CursorCult repo.")
             continue
 
-        current_tag = get_current_tag(rule_path)
         try:
             run(["git", "fetch", "--tags"], cwd=rule_path)
         except RuntimeError as e:
-            if "would clobber existing tag" in str(e) and current_tag == "v0":
+            if "would clobber existing tag" in str(e):
                 try:
                     run(["git", "fetch", "--tags", "--force"], cwd=rule_path)
                 except RuntimeError:
@@ -814,8 +815,6 @@ def update_rules(latest: bool = False, path: Optional[str] = None) -> None:
                 print(f"Skipping {name}: failed to fetch tags.")
                 continue
 
-        current_tag = get_current_tag(rule_path)
-
         proc = subprocess.run(
             ["git", "tag", "-l", "v*"],
             cwd=rule_path,
@@ -824,72 +823,32 @@ def update_rules(latest: bool = False, path: Optional[str] = None) -> None:
             text=True,
         )
         tags = [t for t in proc.stdout.splitlines() if TAG_RE.match(t)]
-        
         if not tags:
             print(f"{name}: no versions found.")
             continue
-            
+
         parsed_tags = []
         for t in tags:
             m = TAG_RE.match(t)
             if m:
                 parsed_tags.append((int(m.group(1)), t))
-        
         if not parsed_tags:
+            print(f"{name}: no valid versions found.")
             continue
-            
+
         max_ver, max_tag = max(parsed_tags, key=lambda x: x[0])
-        
-        target_tag = current_tag
-        action = "none"
-        message = ""
-        up_to_date_message = ""
-
-        if not current_tag:
-            print(f"{name}: not on a specific version tag. Skipping.")
-            continue
-
-        match = TAG_RE.match(current_tag)
-        if not match:
-            print(f"{name}: current tag '{current_tag}' unknown format. Skipping.")
-            continue
-            
-        current_ver = int(match.group(1))
-
-        if current_ver == 0:
-            if max_ver > 0:
-                target_tag = max_tag
-                action = "update"
-                message = f"v0 (volatile) -> {target_tag} (stable)"
-                up_to_date_message = f"up-to-date ({target_tag})"
-            else:
-                target_tag = "v0"
-                action = "update"
-                message = "refreshing v0"
-                up_to_date_message = "up-to-date (v0)"
+        target_tag = requested_tag
+        if target_tag:
+            if target_tag not in tags:
+                print(f"{name}: tag '{target_tag}' not found.")
+                continue
         else:
-            if max_ver > current_ver:
-                if latest:
-                    target_tag = max_tag
-                    action = "update"
-                    message = f"{current_tag} -> {max_tag} (forced)"
-                    up_to_date_message = f"up-to-date ({max_tag})"
-                else:
-                    action = "notify"
-                    print(f"{name}: update available {current_tag} -> {max_tag}. Use --latest to apply.")
-            else:
-                up_to_date_message = f"up-to-date ({current_tag})"
+            target_tag = "v0" if "v0" in tags else max_tag
 
-        if action == "update":
-            before_sha = get_head_sha(rule_path)
-            run(["git", "checkout", target_tag], cwd=rule_path)
-            after_sha = get_head_sha(rule_path)
-            if before_sha and after_sha and before_sha == after_sha:
-                if up_to_date_message:
-                    print(f"{name}: {up_to_date_message}")
-                else:
-                    print(f"{name}: up-to-date")
-            else:
-                print(f"{name}: updated ({message})")
-        elif action == "none" and up_to_date_message:
-            print(f"{name}: {up_to_date_message}")
+        before_sha = get_head_sha(rule_path)
+        run(["git", "checkout", target_tag], cwd=rule_path)
+        after_sha = get_head_sha(rule_path)
+        if before_sha and after_sha and before_sha == after_sha:
+            print(f"{name}: up-to-date ({target_tag})")
+        else:
+            print(f"{name}: updated ({target_tag})")
