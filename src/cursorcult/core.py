@@ -181,6 +181,11 @@ def run_stream(cmd: List[str], cwd: Optional[str] = None, env: Optional[Dict[str
     if proc.returncode != 0:
         raise RuntimeError(f"Command failed: {' '.join(cmd)}")
 
+def run_stream_allow_failure(cmd: List[str], cwd: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> None:
+    proc = subprocess.run(cmd, cwd=cwd, env=env)
+    if proc.returncode != 0:
+        raise SystemExit(proc.returncode)
+
 def normalize_python_argv(argv: List[str]) -> List[str]:
     if not argv:
         return argv
@@ -342,7 +347,7 @@ def eval_rule(rule_name: str) -> None:
         env["CC_DOMAINS"] = ",".join(domains)
     validate_cmd = [sys.executable, validate_script, output_abs]
     run_stream(validate_cmd, cwd=cc_dir, env=env)
-    run_stream(normalize_python_argv(eval_cmd), cwd=cc_dir)
+    run_stream_allow_failure(normalize_python_argv(eval_cmd), cwd=cc_dir)
 
 def get_current_tag(cwd: str) -> str:
     proc = subprocess.run(
