@@ -358,6 +358,20 @@ def get_head_sha(cwd: str) -> str:
         return proc.stdout.strip()
     return ""
 
+def get_head_branch(cwd: str) -> str:
+    proc = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode == 0:
+        ref = proc.stdout.strip()
+        if ref and ref != "HEAD":
+            return ref
+    return ""
+
 def get_head_ref(cwd: str) -> str:
     current_tag = get_current_tag(cwd)
     if current_tag:
@@ -438,6 +452,53 @@ def canonicalize_rule_path(path: str) -> str:
     if not os.path.isdir(target_path):
         raise RuntimeError(f"Path not found: {path}")
     return target_path
+
+def test_rule(rule_name: str) -> None:
+    rules_dir = ensure_rules_dir()
+    if not rule_name:
+        raise RuntimeError("Rule name is required.")
+    rule_dir = os.path.join(rules_dir, rule_name)
+    if not os.path.isdir(rule_dir):
+        raise RuntimeError(f"Rule not found in .cursor/rules/{rule_name}.")
+
+    origin = get_origin_url(rule_dir)
+    if not origin:
+        raise RuntimeError("Rule repo has no remote.origin.url configured.")
+
+    tag = get_current_tag(rule_dir)
+    branch = get_head_branch(rule_dir)
+    sha = get_head_sha(rule_dir)
+    if tag:
+        if tag == "v0":
+            ref = "v0"
+        else:
+            ref = tag
+        clone_args = ["git", "clone", "--depth", "1", "--branch", ref, origin]
+    elif branch:
+        ref = branch
+        clone_args = ["git", "clone", "--depth", "1", "--branch", ref, origin]
+    elif sha:
+        ref = sha
+        clone_args = ["git", "clone", "--depth", "1", origin]
+    else:
+        raise RuntimeError("Unable to determine current rule ref.")
+
+    tests_root = os.path.join(rules_dir, ".cctests", rule_name, ref)
+    if os.path.isdir(tests_root):
+        shutil.rmtree(tests_root)
+    os.makedirs(os.path.dirname(tests_root), exist_ok=True)
+
+    run(clone_args + [tests_root])
+    if not (tag or branch):
+        run(["git", "checkout", ref], cwd=tests_root)
+
+    tests_dir = os.path.join(tests_root, "tests")
+    if not os.path.isdir(tests_dir):
+        raise RuntimeError(f"No tests/ directory found at {tests_root}.")
+
+    env = os.environ.copy()
+    env[f"{rule_name.upper()}_RULE_DIR"] = rule_dir
+    run_stream([sys.executable, "-m", "pytest", "tests"], cwd=tests_root, env=env)
 
 def is_cursorcult_repo(cwd: str) -> bool:
     proc = subprocess.run(

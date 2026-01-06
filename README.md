@@ -190,6 +190,23 @@ python .cursor/rules/UNO/scripts/generate.py --glob "tests/**/*.py" --domain tes
 python .cursor/rules/UNO/scripts/evaluate.py --input defs.json
 ```
 
+## Testing rule packs
+
+Rules can ship tests on a development branch (typically `v0`) while keeping
+the `main` branch minimal. To run those tests against the currently installed
+rule scripts:
+
+```sh
+cursorcult test <RULE>
+```
+
+`cursorcult test` clones the repo at the installed ref into
+`.cursor/rules/.cctests/<RULE>/<ref>/` and runs `pytest` there. It sets
+`<RULE>_RULE_DIR` so tests can target the installed scripts. If the rule is on
+`v0`, the tests should live on the `v0` branch (not on `main`).
+
+You should add `.cursor/rules/.cctests/` to your project `.gitignore`.
+
 ## Creating a new rule pack
 
 To propose a new rule pack in the CursorCult org, use the intake repo:
