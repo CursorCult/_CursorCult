@@ -7,6 +7,12 @@ pipx install cursorcult
 cursorcult
 ```
 
+If you need a specific Python version (e.g., 3.12):
+
+```sh
+pipx install --python python3.12 cursorcult
+```
+
 CursorCult is a library of small, opinionated Cursor rule packs. Each rule lives in its own repository and is meant to be copied into a codebase that wants to follow it.
 
 Main organization page (browse all packs): https://github.com/CursorCult
