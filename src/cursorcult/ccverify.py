@@ -104,6 +104,7 @@ def check_tracked_files(path: str) -> List[str]:
     extra = {f for f in extra if not f.startswith("scripts/")}
     if test_branch:
         allowed = {
+            ".gitignore",
             "requirements-test.txt",
             ".github/workflows/tests.yml",
             ".github/workflows/mint.yml",
@@ -446,7 +447,7 @@ def check_branch_core_layout(path: str, branch_ref: str) -> List[str]:
     extra = pruned - core - ci_paths
     extra = {f for f in extra if not f.startswith("scripts/")}
     if re.fullmatch(r"t\d+", branch_ref):
-        allowed = {".github/workflows/tests.yml", ".github/workflows/mint.yml"}
+        allowed = {".gitignore", ".github/workflows/tests.yml", ".github/workflows/mint.yml"}
         extra = {f for f in extra if f not in allowed}
     if extra:
         errors.append(
