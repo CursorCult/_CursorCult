@@ -14,6 +14,22 @@ from typing import List, Optional, Set, Tuple
 from .constants import MAX_RULES_CHARS, TAG_RE, UNLICENSE_TEXT
 
 
+def current_branch(path: str) -> Optional[str]:
+    try:
+        branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=path).strip()
+    except Exception:
+        branch = ""
+    if branch and branch != "HEAD":
+        return branch
+    ref_name = os.getenv("GITHUB_REF_NAME")
+    if ref_name:
+        return ref_name
+    ref = os.getenv("GITHUB_REF")
+    if ref and ref.startswith("refs/heads/"):
+        return ref.split("/", 2)[2]
+    return None
+
+
 @dataclass
 class CheckResult:
     ok: bool
@@ -82,12 +98,8 @@ def check_tracked_files(path: str) -> List[str]:
     core = {"LICENSE", "README.md", "RULE.md"}
     ci_paths = {".github/workflows/ccverify.yml", ".github/workflows/ccverify.yaml"}
     tracked = set(files)
-    test_branch = False
-    try:
-        branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=path).strip()
-        test_branch = bool(re.fullmatch(r"t\d+", branch))
-    except Exception:
-        test_branch = False
+    branch = current_branch(path)
+    test_branch = bool(branch and re.fullmatch(r"t\d+", branch))
 
     missing = core - tracked
     if missing:
