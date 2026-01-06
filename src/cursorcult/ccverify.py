@@ -337,6 +337,104 @@ def check_version_branches(
     return errors
 
 
+def read_file_at_ref(path: str, ref: str, filename: str) -> Optional[str]:
+    proc = subprocess.run(
+        ["git", "show", f"{ref}:{filename}"],
+        cwd=path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def list_tree_paths(path: str, ref: str) -> Set[str]:
+    proc = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", ref],
+        cwd=path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or "Failed to list tree paths.")
+    return {line.strip() for line in proc.stdout.splitlines() if line.strip()}
+
+
+def check_main_is_tagged(path: str, main_ref: str, tags: List[Tuple[str, str]]) -> List[str]:
+    errors: List[str] = []
+    tag_commits = {sha for name, sha in tags if TAG_RE.match(name)}
+    commits = run(["git", "rev-list", main_ref], cwd=path).splitlines()
+    untagged = [c for c in commits if c not in tag_commits]
+    if untagged:
+        errors.append("All commits on main must be tagged with a vN tag.")
+    return errors
+
+
+def check_main_excludes_tests(path: str, main_ref: str) -> List[str]:
+    errors: List[str] = []
+    paths = list_tree_paths(path, main_ref)
+    for forbidden in ("tests/", "requirements-test.txt"):
+        if forbidden.endswith("/") and any(p.startswith(forbidden) for p in paths):
+            errors.append("Main must not include tests/ directory.")
+            break
+        if forbidden == "requirements-test.txt" and forbidden in paths:
+            errors.append("Main must not include requirements-test.txt.")
+    return errors
+
+
+def check_test_requirements(path: str, branch_ref: str) -> List[str]:
+    errors: List[str] = []
+    content = read_file_at_ref(path, branch_ref, "requirements-test.txt")
+    if content is None:
+        errors.append(f"{branch_ref} must include requirements-test.txt.")
+        return errors
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    allowed = {"cursorcult", "pytest"}
+    extra = [line for line in lines if line not in allowed]
+    if extra:
+        errors.append(
+            f"{branch_ref} requirements-test.txt must only include: cursorcult, pytest."
+        )
+    missing = [name for name in ("cursorcult", "pytest") if name not in lines]
+    if missing:
+        errors.append(f"{branch_ref} requirements-test.txt missing: {', '.join(missing)}.")
+    return errors
+
+
+def check_version_branch_matches_tag(
+    path: str, tag: str, branch_ref: str
+) -> List[str]:
+    errors: List[str] = []
+    proc = subprocess.run(
+        [
+            "git",
+            "diff",
+            "--name-only",
+            tag,
+            branch_ref,
+            "--",
+            ":!tests",
+            ":!requirements-test.txt",
+        ],
+        cwd=path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode != 0:
+        errors.append(proc.stderr.strip() or "Failed to diff tag/branch.")
+        return errors
+    changed = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    if changed:
+        errors.append(
+            f"{tag} must match {branch_ref} except tests/ and requirements-test.txt."
+        )
+    return errors
+
+
 def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
     errors: List[str] = []
     repo_name = get_repo_name(path, name_override)
@@ -352,6 +450,17 @@ def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
         tags = get_tags(path)
         errors.extend(check_tags(path, main_commits, tags))
         errors.extend(check_version_branches(path, tags, main_ref))
+        errors.extend(check_main_is_tagged(path, main_ref, tags))
+        errors.extend(check_main_excludes_tests(path, main_ref))
+        version_tags = [t for t, _ in tags if TAG_RE.match(t)]
+        for tag in version_tags:
+            branch_ref = find_branch_ref(path, tag)
+            if not branch_ref:
+                continue
+            errors.extend(check_test_requirements(path, branch_ref))
+            version = int(TAG_RE.match(tag).group(1))
+            if version >= 1:
+                errors.extend(check_version_branch_matches_tag(path, tag, branch_ref))
     except Exception as e:
         errors.append(f"Git checks failed: {e}")
 
