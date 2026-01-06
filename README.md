@@ -203,8 +203,8 @@ cursorcult test <RULE>
 `cursorcult test` clones the repo at the installed ref into
 `.cursor/rules/.cctests/<RULE>/<ref>/` and runs `pytest` there. It sets
 `<RULE>_RULE_DIR` so tests can target the installed scripts. If the rule is on
-`v0`, the tests should live on the `v0` branch (not on `main`). If the rule is on
-`v1`, tests should live on the `v1` branch, and so on.
+`v0`, the tests should live on the `t0` branch (not on `main`). If the rule is on
+`v1`, tests should live on the `t1` branch, and so on.
 
 You should add `.cursor/rules/.cctests/` to your project `.gitignore`.
 
@@ -233,7 +233,7 @@ Release convention for new rules:
 - When ready for the first release, squash `main` to a single commit and tag it `v0`.
 - After any `vN` tags exist, tags must remain contiguous (`v0`, `v1`, `v2`, …). This is what `cursorcult verify` enforces.
 - `main` must only contain tagged `vN` commits (one commit per version).
-- Every version must have a matching `vN` branch with `tests/` and `requirements-test.txt`.
+- Every version must have a matching `tN` branch with `tests/` and `requirements-test.txt`.
 - `tests/` and `requirements-test.txt` must never appear on `main`.
 - For `v1+`, the `vN` tag must match the tip of the corresponding `vN` branch, except for `tests/` and `requirements-test.txt`.
 - `requirements-test.txt` can only include `cursorcult` and `pytest`.

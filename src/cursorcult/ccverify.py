@@ -323,17 +323,18 @@ def check_version_branches(
 
     versions = sorted(int(TAG_RE.match(t).group(1)) for t in version_tags)
     for tag in version_tags:
-        branch_ref = find_branch_ref(path, tag)
+        version = TAG_RE.match(tag).group(1)
+        branch_ref = find_branch_ref(path, f"t{version}")
         if not branch_ref:
-            errors.append(f"Missing version branch '{tag}' for tag {tag}.")
+            errors.append(f"Missing version branch 't{version}' for tag {tag}.")
             continue
         if not branch_has_tests(path, branch_ref):
-            errors.append(f"Version branch '{tag}' must include a tests/ directory.")
+            errors.append(f"Version branch 't{version}' must include a tests/ directory.")
 
     if versions and max(versions) >= 1:
-        v0_ref = find_branch_ref(path, "v0")
+        v0_ref = find_branch_ref(path, "t0")
         if v0_ref and not is_ancestor(path, v0_ref, main_ref):
-            errors.append("v0 branch must be fully merged into main once v1 exists.")
+            errors.append("t0 branch must be fully merged into main once v1 exists.")
     return errors
 
 
@@ -488,13 +489,14 @@ def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
         errors.extend(check_main_excludes_tests(path, main_ref))
         version_tags = [t for t, _ in tags if TAG_RE.match(t)]
         for tag in version_tags:
-            branch_ref = find_branch_ref(path, tag)
+            version = TAG_RE.match(tag).group(1)
+            branch_ref = find_branch_ref(path, f"t{version}")
             if not branch_ref:
                 continue
             errors.extend(check_test_requirements(path, branch_ref))
             errors.extend(check_branch_core_layout(path, branch_ref))
-            version = int(TAG_RE.match(tag).group(1))
-            if version >= 1:
+            version_num = int(version)
+            if version_num >= 1:
                 errors.extend(check_version_branch_matches_tag(path, tag, branch_ref))
     except Exception as e:
         errors.append(f"Git checks failed: {e}")
