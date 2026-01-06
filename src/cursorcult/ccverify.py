@@ -445,6 +445,9 @@ def check_branch_core_layout(path: str, branch_ref: str) -> List[str]:
 
     extra = pruned - core - ci_paths
     extra = {f for f in extra if not f.startswith("scripts/")}
+    if re.fullmatch(r"t\d+", branch_ref):
+        allowed = {".github/workflows/tests.yml", ".github/workflows/mint.yml"}
+        extra = {f for f in extra if f not in allowed}
     if extra:
         errors.append(
             f"{branch_ref} has extra tracked files beyond tests: {', '.join(sorted(extra))}."
