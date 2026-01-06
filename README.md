@@ -232,6 +232,11 @@ Release convention for new rules:
 - Develop on `main` with any number of commits while unreleased (no tags).
 - When ready for the first release, squash `main` to a single commit and tag it `v0`.
 - After any `vN` tags exist, tags must remain contiguous (`v0`, `v1`, `v2`, …). This is what `cursorcult verify` enforces.
+- `main` must only contain tagged `vN` commits (one commit per version).
+- Every version must have a matching `vN` branch with `tests/` and `requirements-test.txt`.
+- `tests/` and `requirements-test.txt` must never appear on `main`.
+- For `v1+`, the `vN` tag must match the tip of the corresponding `vN` branch, except for `tests/` and `requirements-test.txt`.
+- `requirements-test.txt` can only include `cursorcult` and `pytest`.
 
 ## Contributing
 
