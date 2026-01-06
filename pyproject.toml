@@ -4,11 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cursorcult"
-version = "0.14.10"
+version = "0.14.11"
 description = "CLI to list and link CursorCult rules."
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+  "lizard>=1.17.10",
   "tree_sitter>=0.21.3,<0.22",
   "tree-sitter-languages>=1.10.2",
 ]
