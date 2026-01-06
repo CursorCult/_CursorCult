@@ -82,6 +82,12 @@ def check_tracked_files(path: str) -> List[str]:
     core = {"LICENSE", "README.md", "RULE.md"}
     ci_paths = {".github/workflows/ccverify.yml", ".github/workflows/ccverify.yaml"}
     tracked = set(files)
+    test_branch = False
+    try:
+        branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=path).strip()
+        test_branch = bool(re.fullmatch(r"t\d+", branch))
+    except Exception:
+        test_branch = False
 
     missing = core - tracked
     if missing:
@@ -96,6 +102,13 @@ def check_tracked_files(path: str) -> List[str]:
     extra = tracked - core - ci_paths
     # Allow scripts/ directory
     extra = {f for f in extra if not f.startswith("scripts/")}
+    if test_branch:
+        allowed = {
+            "requirements-test.txt",
+            ".github/workflows/tests.yml",
+            ".github/workflows/mint.yml",
+        }
+        extra = {f for f in extra if f not in allowed and not f.startswith("tests/")}
     if extra:
         errors.append(f"Extra tracked files not allowed: {', '.join(sorted(extra))}.")
     return errors
