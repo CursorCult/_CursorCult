@@ -220,16 +220,20 @@ def check_rule_front_matter(path: str, repo_name: str) -> List[str]:
 
 
 def get_main_commits(path: str) -> List[str]:
+    ref = get_main_ref(path)
+    out = run(["git", "rev-list", ref], cwd=path)
+    commits = [c for c in out.splitlines() if c]
+    return commits
+
+
+def get_main_ref(path: str) -> str:
     ref = "main"
     try:
         run(["git", "rev-parse", "--verify", "main"], cwd=path)
     except RuntimeError:
         run(["git", "rev-parse", "--verify", "origin/main"], cwd=path)
         ref = "origin/main"
-
-    out = run(["git", "rev-list", ref], cwd=path)
-    commits = [c for c in out.splitlines() if c]
-    return commits
+    return ref
 
 
 def get_tags(path: str) -> List[Tuple[str, str]]:
@@ -244,9 +248,10 @@ def get_tags(path: str) -> List[Tuple[str, str]]:
     return tags
 
 
-def check_tags(path: str, main_commits: List[str]) -> List[str]:
+def check_tags(path: str, main_commits: List[str], tags: Optional[List[Tuple[str, str]]] = None) -> List[str]:
     errors: List[str] = []
-    tags = get_tags(path)
+    if tags is None:
+        tags = get_tags(path)
     if not tags:
         # Pre‑v0 development is allowed to have no tags. Once tags exist, they must follow vN rules.
         return errors
@@ -274,6 +279,64 @@ def check_tags(path: str, main_commits: List[str]) -> List[str]:
     return errors
 
 
+def find_branch_ref(path: str, name: str) -> Optional[str]:
+    local_ref = f"refs/heads/{name}"
+    remote_ref = f"refs/remotes/origin/{name}"
+    for ref in (local_ref, remote_ref):
+        proc = subprocess.run(
+            ["git", "show-ref", "--verify", "--quiet", ref],
+            cwd=path,
+        )
+        if proc.returncode == 0:
+            return ref.replace("refs/heads/", "").replace("refs/remotes/", "")
+    return None
+
+
+def branch_has_tests(path: str, ref: str) -> bool:
+    proc = subprocess.run(
+        ["git", "ls-tree", "-d", "--name-only", ref, "tests"],
+        cwd=path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    return "tests" in {line.strip() for line in proc.stdout.splitlines() if line.strip()}
+
+
+def is_ancestor(path: str, ancestor: str, ref: str) -> bool:
+    proc = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", ancestor, ref],
+        cwd=path,
+    )
+    return proc.returncode == 0
+
+
+def check_version_branches(
+    path: str, tags: List[Tuple[str, str]], main_ref: str
+) -> List[str]:
+    errors: List[str] = []
+    version_tags = [name for name, _ in tags if TAG_RE.match(name)]
+    if not version_tags:
+        return errors
+
+    versions = sorted(int(TAG_RE.match(t).group(1)) for t in version_tags)
+    for tag in version_tags:
+        branch_ref = find_branch_ref(path, tag)
+        if not branch_ref:
+            errors.append(f"Missing version branch '{tag}' for tag {tag}.")
+            continue
+        if not branch_has_tests(path, branch_ref):
+            errors.append(f"Version branch '{tag}' must include a tests/ directory.")
+
+    if versions and max(versions) >= 1:
+        v0_ref = find_branch_ref(path, "v0")
+        if v0_ref and not is_ancestor(path, v0_ref, main_ref):
+            errors.append("v0 branch must be fully merged into main once v1 exists.")
+    return errors
+
+
 def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
     errors: List[str] = []
     repo_name = get_repo_name(path, name_override)
@@ -285,7 +348,10 @@ def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
     errors.extend(check_rule_front_matter(path, repo_name))
     try:
         main_commits = get_main_commits(path)
-        errors.extend(check_tags(path, main_commits))
+        main_ref = get_main_ref(path)
+        tags = get_tags(path)
+        errors.extend(check_tags(path, main_commits, tags))
+        errors.extend(check_version_branches(path, tags, main_ref))
     except Exception as e:
         errors.append(f"Git checks failed: {e}")
 
