@@ -412,6 +412,17 @@ def get_origin_url(cwd: str) -> str:
         return proc.stdout.strip()
     return ""
 
+def remote_has_branch(origin: str, branch: str) -> bool:
+    proc = subprocess.run(
+        ["git", "ls-remote", "--heads", origin, branch],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    return bool(proc.stdout.strip())
+
 def list_installed_rules() -> None:
     rules_dir = find_rules_dir()
     if not rules_dir:
@@ -469,8 +480,10 @@ def test_rule(rule_name: str) -> None:
     branch = get_head_branch(rule_dir)
     sha = get_head_sha(rule_dir)
     if tag:
-        if tag == "v0":
-            ref = "v0"
+        m = TAG_RE.match(tag)
+        if m:
+            candidate = f"t{m.group(1)}"
+            ref = candidate if remote_has_branch(origin, candidate) else tag
         else:
             ref = tag
         clone_args = ["git", "clone", "--depth", "1", "--branch", ref, origin]
