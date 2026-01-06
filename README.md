@@ -237,6 +237,7 @@ Release convention for new rules:
 - `tests/` and `requirements-test.txt` must never appear on `main`.
 - For `v1+`, the `vN` tag must match the tip of the corresponding `vN` branch, except for `tests/` and `requirements-test.txt`.
 - `requirements-test.txt` can only include `cursorcult` and `pytest`.
+- Each `vN` branch must still be a valid rule repo after removing `tests/` and `requirements-test.txt`.
 
 ## Contributing
 
