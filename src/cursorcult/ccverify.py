@@ -404,6 +404,40 @@ def check_test_requirements(path: str, branch_ref: str) -> List[str]:
     return errors
 
 
+def check_branch_core_layout(path: str, branch_ref: str) -> List[str]:
+    errors: List[str] = []
+    paths = list_tree_paths(path, branch_ref)
+    pruned = {
+        p
+        for p in paths
+        if p != "requirements-test.txt" and not p.startswith("tests/")
+    }
+
+    core = {"LICENSE", "README.md", "RULE.md"}
+    ci_paths = {".github/workflows/ccverify.yml", ".github/workflows/ccverify.yaml"}
+
+    missing = core - pruned
+    if missing:
+        errors.append(
+            f"{branch_ref} missing required files (excluding tests): {', '.join(sorted(missing))}."
+        )
+
+    has_ci = bool(pruned & ci_paths)
+    if not has_ci:
+        errors.append(
+            f"{branch_ref} missing required CI workflow (excluding tests): "
+            ".github/workflows/ccverify.yml (or .yaml)."
+        )
+
+    extra = pruned - core - ci_paths
+    extra = {f for f in extra if not f.startswith("scripts/")}
+    if extra:
+        errors.append(
+            f"{branch_ref} has extra tracked files beyond tests: {', '.join(sorted(extra))}."
+        )
+    return errors
+
+
 def check_version_branch_matches_tag(
     path: str, tag: str, branch_ref: str
 ) -> List[str]:
@@ -458,6 +492,7 @@ def verify_repo(path: str, name_override: Optional[str] = None) -> CheckResult:
             if not branch_ref:
                 continue
             errors.extend(check_test_requirements(path, branch_ref))
+            errors.extend(check_branch_core_layout(path, branch_ref))
             version = int(TAG_RE.match(tag).group(1))
             if version >= 1:
                 errors.extend(check_version_branch_matches_tag(path, tag, branch_ref))
