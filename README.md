@@ -206,6 +206,12 @@ cursorcult test <RULE>
 `v0`, the tests should live on the `t0` branch (not on `main`). If the rule is on
 `v1`, tests should live on the `t1` branch, and so on.
 
+If you installed with `pipx`, add pytest once:
+
+```sh
+pipx inject cursorcult pytest
+```
+
 You should add `.cursor/rules/.cctests/` to your project `.gitignore`.
 
 ## Creating a new rule pack

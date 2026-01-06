@@ -509,6 +509,14 @@ def test_rule(rule_name: str) -> None:
     if not os.path.isdir(tests_dir):
         raise RuntimeError(f"No tests/ directory found at {tests_root}.")
 
+    try:
+        import pytest  # noqa: F401
+    except Exception:
+        raise RuntimeError(
+            "pytest is required for cursorcult test. "
+            "Install with: pipx inject cursorcult pytest"
+        )
+
     env = os.environ.copy()
     env[f"{rule_name.upper()}_RULE_DIR"] = rule_dir
     run_stream([sys.executable, "-m", "pytest", "tests"], cwd=tests_root, env=env)
@@ -571,7 +579,7 @@ def link_rule(spec: str, subtree: bool = False, *, skip_existing: bool = False) 
         if os.path.exists(os.path.join(target_path, ".git")):
             print(f"Updating {name} to {tag}...")
             try:
-                run(["git", "fetch", "--tags"], cwd=target_path)
+                run(["git", "fetch", "--tags", "--force"], cwd=target_path)
                 run(["git", "checkout", tag], cwd=target_path)
             except RuntimeError as e:
                 print(f"Failed to update {name}: {e}")
