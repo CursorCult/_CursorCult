@@ -193,17 +193,6 @@ def normalize_python_argv(argv: List[str]) -> List[str]:
         return [sys.executable, *argv[1:]]
     return argv
 
-@dataclass(frozen=True)
-class GeneratorSpec:
-    argv: List[str]
-    output: Optional[str]
-
-@dataclass(frozen=True)
-class UnoGeneratorSpec:
-    argv: List[str]
-    domain: str
-    output: str
-
 def find_upwards(start_dir: str, filename: str) -> Optional[str]:
     current = os.path.abspath(start_dir)
     while True:
@@ -243,9 +232,10 @@ def parse_ccfile(path: str) -> List[str]:
 
 def parse_eval_generate_lines(
     lines: List[str],
-) -> Tuple[List[GeneratorSpec], List[UnoGeneratorSpec], List[str], str]:
-    generators: List[GeneratorSpec] = []
-    uno_generators: List[UnoGeneratorSpec] = []
+    *,
+    require_domain: bool,
+) -> Tuple[List[List[str]], List[str], str, List[str]]:
+    generators: List[List[str]] = []
     eval_cmd: Optional[List[str]] = None
     output_path: Optional[str] = None
     domains: List[str] = []
@@ -256,45 +246,44 @@ def parse_eval_generate_lines(
         argv = shlex.split(raw_line)
         if not argv:
             raise RuntimeError("Invalid .CC file: empty command line.")
-        has_input = extract_flag_value(argv, "--input")
-        has_output = extract_flag_value(argv, "--output")
-        has_domain = extract_flag_value(argv, "--domain")
-        if has_input:
+        input_arg = extract_flag_value(argv, "--input")
+        output_arg = extract_flag_value(argv, "--output")
+        domain_arg = extract_flag_value(argv, "--domain")
+        if input_arg:
             if eval_cmd is not None:
                 raise RuntimeError("Multiple evaluate commands found; only one is allowed.")
-            eval_cmd = argv
-            if has_output or has_domain:
+            if output_arg or domain_arg:
                 raise RuntimeError("Evaluate command must only require --input.")
+            eval_cmd = argv
             continue
-        if not has_output:
+        if not output_arg:
             raise RuntimeError("Generate commands must include --output.")
-        if has_output:
-            if output_path is None:
-                output_path = has_output
-            elif has_output != output_path:
-                raise RuntimeError("All generate commands must use the same --output path.")
-        generators.append(GeneratorSpec(argv=argv, output=has_output))
-        if has_domain:
-            if not domain_re.match(has_domain):
-                raise RuntimeError(f"Invalid domain '{has_domain}'.")
-            if has_domain in seen_domains:
-                raise RuntimeError(f"Duplicate domain '{has_domain}' in .CC file.")
-            uno_generators.append(UnoGeneratorSpec(argv=argv, domain=has_domain, output=has_output))
-            domains.append(has_domain)
-            seen_domains.add(has_domain)
+        if output_path is None:
+            output_path = output_arg
+        elif output_arg != output_path:
+            raise RuntimeError("All generate commands must use the same --output path.")
+        if require_domain:
+            if not domain_arg:
+                raise RuntimeError("Generate commands must include --domain.")
+            if not domain_re.match(domain_arg):
+                raise RuntimeError(f"Invalid domain '{domain_arg}'.")
+            if domain_arg in seen_domains:
+                raise RuntimeError(f"Duplicate domain '{domain_arg}' in .CC file.")
+            seen_domains.add(domain_arg)
+            domains.append(domain_arg)
+        generators.append(argv)
 
     if eval_cmd is None:
         raise RuntimeError("Missing evaluate command with --input.")
     if output_path is None:
         raise RuntimeError("Missing --output in generate commands.")
-
     eval_input = extract_flag_value(eval_cmd, "--input")
     if not eval_input:
         raise RuntimeError("Evaluate command missing --input.")
     if eval_input != output_path:
         raise RuntimeError("Evaluate --input must match generate --output.")
 
-    return generators, uno_generators, eval_cmd, eval_input
+    return generators, eval_cmd, output_path, domains
 
 def resolve_output_path(root_dir: str, output: str) -> str:
     if os.path.isabs(output):
@@ -321,19 +310,15 @@ def eval_rule(rule_name: str) -> None:
 
     cc_dir = os.path.dirname(cc_path)
     lines = parse_ccfile(cc_path)
-    generators, uno_generators, eval_cmd, output_rel = parse_eval_generate_lines(lines)
-
-    domains = []
-    if rule_name.upper() == "UNO":
-        if not uno_generators:
-            raise RuntimeError("UNO generate commands must include --domain.")
-        generators = [GeneratorSpec(argv=g.argv, output=g.output) for g in uno_generators]
-        domains = [g.domain for g in uno_generators]
+    require_domain = rule_name.upper() == "UNO"
+    generators, eval_cmd, output_rel, domains = parse_eval_generate_lines(
+        lines, require_domain=require_domain
+    )
 
     output_abs = resolve_output_path(cc_dir, output_rel)
 
     for generator in generators:
-        run_stream(normalize_python_argv(generator.argv), cwd=cc_dir)
+        run_stream(normalize_python_argv(generator), cwd=cc_dir)
 
     validate_script = os.path.join(rule_dir, "scripts", "validate.py")
     eval_script = os.path.join(rule_dir, "scripts", "evaluate.py")
